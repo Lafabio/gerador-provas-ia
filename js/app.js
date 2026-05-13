@@ -1,1 +1,1 @@
-
+console.log("App iniciado");
