@@ -20,8 +20,21 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
 .tbtn.prime{background:#fff;color:var(--ac)}
 .tbtn.prime:hover{background:#e0eaff}
 .tbtn:disabled{opacity:.5;cursor:not-allowed}
-.app{display:grid;grid-template-columns:295px 1fr;min-height:calc(100vh - 50px)}
-.sb{background:var(--sf);border-right:1px solid var(--br);padding:13px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:13px}
+/* ── Sidebar retractable ── */
+.app{display:grid;grid-template-columns:295px 1fr;min-height:calc(100vh - 50px);transition:grid-template-columns .25s ease}
+.app.sb-collapsed{grid-template-columns:44px 1fr}
+.sb{background:var(--sf);border-right:1px solid var(--br);padding:13px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:13px;transition:all .25s ease;position:relative}
+.sb-collapsed .sb{padding:10px 6px;overflow:hidden}
+.sb-collapsed .sb-s,.sb-collapsed .sb .fl,.sb-collapsed .slbl,.sb-collapsed .tipo-tg,.sb-collapsed .logo-area,.sb-collapsed .cal-wrap,.sb-collapsed .fr2,.sb-collapsed .cad-list,.sb-collapsed .cad-row{display:none!important}
+.sb-collapsed .sb-action-btns{display:none!important}
+.sb-toggle{position:absolute;top:10px;right:-14px;z-index:200;background:var(--card);border:1px solid var(--br);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.12);transition:transform .25s}
+.sb-toggle:hover{background:var(--acbg);border-color:var(--ac)}
+/* ── NEE Modal ── */
+.nee-chip{display:inline-flex;align-items:center;gap:6px;border:2px solid var(--br);border-radius:8px;padding:8px 14px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;background:var(--bg);color:var(--tx);transition:all .2s;user-select:none}
+.nee-chip input{width:15px;height:15px;accent-color:var(--ac);cursor:pointer}
+.nee-chip:has(input:checked){border-color:var(--ac);background:var(--acbg);color:var(--ac)}
+.nee-preview{background:var(--bg);border:1px solid var(--br);border-radius:8px;padding:12px 14px;max-height:220px;overflow-y:auto;font-size:13.5px;line-height:1.7;font-family:'IBM Plex Sans',sans-serif}
+.nee-q-item{border-bottom:1px dashed var(--br);padding:10px 0;font-size:13.5px;line-height:1.7}
 .sb-s{display:flex;flex-direction:column;gap:7px}
 .slbl{font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding-bottom:4px;border-bottom:1px solid var(--br)}
 .fl{display:flex;flex-direction:column;gap:3px}
@@ -119,7 +132,40 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
 .modal-hd h2{font-size:13px;font-weight:700}
 .modal-hd button{background:var(--bg);border:1px solid var(--br);font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
 .modal-bd{padding:18px;max-height:78vh;overflow-y:auto;font-family:Arial,sans-serif;font-size:11pt}
-@media print{.no-print{display:none}}
+@media print{
+  .no-print{display:none}
+  .prova-rodape{display:flex!important}
+}
+/* ── Rodapé da prova ── */
+.prova-rodape{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  max-width:880px;
+  margin:18px auto 0;
+  padding:10px 14px;
+  border-top:1px solid var(--br);
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:9.5px;
+  color:var(--mu);
+  letter-spacing:.02em;
+}
+.prova-rodape span{display:flex;align-items:center;gap:5px;}
+.prova-rodape .rod-sep{color:var(--br);font-size:12px;}
+@media print{
+  .prova-rodape{
+    position:fixed;
+    bottom:0;left:0;right:0;
+    max-width:100%;
+    border-top:1px solid #ccc;
+    background:#fff;
+    padding:6px 20mm;
+    margin:0;
+    font-size:8.5pt;
+    color:#888;
+  }
+}
 .ver-btn{background:var(--bg);border:1px solid var(--br);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 14px;border-radius:6px;cursor:pointer;color:var(--mu);transition:all .2s}
 .ver-btn.active{background:var(--ac);color:#fff;border-color:var(--ac)}
 .ver-btn:hover:not(.active){background:var(--acbg);border-color:var(--ac);color:var(--ac)}
@@ -157,7 +203,9 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
 </div>
 
 <div class="app">
-<aside class="sb no-print">
+<aside class="sb no-print" id="sidebarEl">
+  <!-- Toggle retrair -->
+  <button class="sb-toggle" id="sbToggleBtn" onclick="toggleSidebar()" title="Recolher/expandir menu">◀</button>
   <div class="sb-s">
     <div class="slbl">Escola</div>
     <div class="fl"><label>Nome da Escola</label><input id="nomeEscola" placeholder="Ex: Colégio Municipal..." oninput="autoSave()"></div>
@@ -243,8 +291,9 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
     <div class="slbl">Instruções no cabeçalho</div>
     <div class="fl"><textarea id="instrucoes" rows="3" oninput="autoSave()">Sua avaliação será corrigida conforme as opções marcadas. Não rasure! Pinte a alternativa com caneta preta ou azul.</textarea></div>
   </div>
-  <div class="sb-s">
+  <div class="sb-s sb-action-btns">
     <button onclick="addQ()" style="width:100%;background:var(--ac);color:#fff;border:none;padding:8px;border-radius:6px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:4px">+ Adicionar Questão</button>
+    <button onclick="openModalNEE()" style="width:100%;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;padding:8px;border-radius:6px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:4px">♿ Adaptar para Inclusão (NEE)</button>
     <button onclick="resetAll()" style="width:100%;background:var(--bg);color:var(--mu);border:1px solid var(--br);padding:7px;border-radius:6px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;cursor:pointer">🗑 Limpar Tudo</button>
   </div>
 </aside>
@@ -256,6 +305,13 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
   </div>
   <div id="qContainer"></div>
   <button class="add-btn no-print" onclick="addQ()">＋ Adicionar Questão</button>
+
+  <!-- Rodapé da prova -->
+  <div class="prova-rodape">
+    <span>🤖 Plataforma de Geração de Provas com IA</span>
+    <span class="rod-sep">·</span>
+    <span>Prof. Lafaiete Erkmann</span>
+  </div>
 </main>
 </div>
 
@@ -358,7 +414,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
         </div>
         <!-- Hint somatória -->
         <div id="hintSomatoria" style="display:none;margin-top:7px;font-size:11px;background:#fef9c3;border:1px solid #fde68a;border-radius:6px;padding:7px 10px;color:#78350f;">
-          ⚙️ A IA irá gerar <strong>4 afirmações</strong> com valores <strong>(01)(02)(04)(08)</strong>. O gabarito será a soma dos itens verdadeiros. Revise e ajuste os itens após a geração.
+          ⚙️ A IA irá gerar <strong>7 afirmações</strong> com valores <strong>(01)(02)(04)(08)(16)(32)(64)</strong> — pontuação máxima: 127. O gabarito será a soma dos itens verdadeiros. Revise após a geração.
         </div>
       </div>
 
@@ -445,6 +501,68 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
   </div>
 </div>
 
+<!-- MODAL ADAPTAÇÃO INCLUSIVA (NEE) -->
+<div class="modal-ov hidden" id="modalNEE">
+  <div class="modal-box" style="max-width:680px;">
+    <div class="modal-hd">
+      <h2>♿ Adaptar Avaliação para Inclusão (NEE)</h2>
+      <button onclick="closeModalNEE()">✕ Fechar</button>
+    </div>
+    <div class="modal-bd" style="font-family:'IBM Plex Sans',sans-serif;display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Info -->
+      <div style="background:#f5f3ff;border:1px solid #c4b5fd;border-radius:7px;padding:10px 13px;font-size:11.5px;color:#4c1d95;">
+        🧠 A IA irá reescrever as questões da prova atual adaptando linguagem, estrutura e apresentação para as necessidades indicadas.
+        A versão adaptada será gerada com <strong>fonte 14pt e espaçamento 1,5</strong>, pronta para impressão.
+      </div>
+
+      <!-- Perfil NEE -->
+      <div>
+        <label style="font-size:10.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:8px;">Perfil do aluno — selecione um ou mais:</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <label class="nee-chip"><input type="checkbox" id="neeTDAH" value="tdah"> 🧩 TDAH</label>
+          <label class="nee-chip"><input type="checkbox" id="neeTEA"  value="tea">  🌈 Autismo leve (TEA)</label>
+          <label class="nee-chip"><input type="checkbox" id="neeDIS"  value="dis">  📖 Dislexia</label>
+          <label class="nee-chip"><input type="checkbox" id="neeBX"   value="bx">   🐢 Baixo desempenho</label>
+        </div>
+      </div>
+
+      <!-- Opções de adaptação -->
+      <div>
+        <label style="font-size:10.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:8px;">Adaptações adicionais:</label>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="neeImagens" checked style="accent-color:var(--ac);width:14px;height:14px;"> Sugerir ícone/símbolo visual ao lado de cada questão</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="neeSimplificar" checked style="accent-color:var(--ac);width:14px;height:14px;"> Simplificar vocabulário complexo mantendo o conteúdo</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="neeFrases" checked style="accent-color:var(--ac);width:14px;height:14px;"> Quebrar enunciados longos em frases curtas</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="neeDestaque" checked style="accent-color:var(--ac);width:14px;height:14px;"> Destacar palavras-chave em <strong>negrito</strong></label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="neeNumeracao" checked style="accent-color:var(--ac);width:14px;height:14px;"> Numeração visual grande por questão (①②③…)</label>
+        </div>
+      </div>
+
+      <!-- Botão gerar -->
+      <button id="btnGerarNEE" onclick="gerarAdaptacaoNEE()" style="background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;padding:10px;border-radius:7px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+        ✨ Gerar Versão Adaptada
+      </button>
+
+      <!-- Status -->
+      <div id="neeStatus" style="display:none;border-radius:7px;padding:10px 13px;font-size:12px;border:1px solid;"></div>
+
+      <!-- Preview -->
+      <div id="neePreviewWrap" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <label style="font-size:10.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;">Prévia da versão adaptada</label>
+          <div style="display:flex;gap:6px;">
+            <button onclick="exportNEEDocx()" style="background:var(--ac);color:#fff;border:none;font-size:11px;font-weight:700;padding:6px 12px;border-radius:6px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;">📝 Exportar DOCX</button>
+            <button onclick="printNEE()" style="background:var(--bg);border:1px solid var(--br);font-size:11px;font-weight:700;padding:6px 12px;border-radius:6px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;">🖨️ Imprimir</button>
+          </div>
+        </div>
+        <div class="nee-preview" id="neePreview"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <script>
 // ── ESTADO ──
 let tipoProva='efaf', questoes=[], qId=0, logoB64=null;
@@ -465,6 +583,239 @@ function loadLogo(inp){
   const r=new FileReader();
   r.onload=e=>{ logoB64=e.target.result; const img=document.getElementById('logoImg'); img.src=logoB64; img.style.display='block'; document.getElementById('logoHint').style.display='none'; };
   r.readAsDataURL(inp.files[0]);
+}
+
+// ── Sidebar retractable ──
+function toggleSidebar(){
+  const app = document.querySelector('.app');
+  const btn = document.getElementById('sbToggleBtn');
+  const collapsed = app.classList.toggle('sb-collapsed');
+  btn.textContent = collapsed ? '▶' : '◀';
+  btn.title = collapsed ? 'Expandir menu' : 'Recolher menu';
+}
+
+// ══════════════════════════════════════════════════════════════
+// ADAPTAÇÃO INCLUSIVA (NEE) — TDAH / TEA / Dislexia
+// ══════════════════════════════════════════════════════════════
+let neeQuestoesAdaptadas = [];
+
+const NUMS_VISUAIS = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮'];
+
+function openModalNEE(){
+  if(!questoes.length){ alert('Adicione questões à avaliação antes de adaptar.'); return; }
+  document.getElementById('modalNEE').classList.remove('hidden');
+  document.getElementById('neePreviewWrap').style.display = 'none';
+  document.getElementById('neeStatus').style.display = 'none';
+  neeQuestoesAdaptadas = [];
+}
+function closeModalNEE(){ document.getElementById('modalNEE').classList.add('hidden'); }
+
+function setNeeStatus(msg, tipo){
+  const el = document.getElementById('neeStatus');
+  el.style.display = 'block';
+  const cores = {
+    load: {bg:'#faf5ff',border:'#e9d5ff',color:'#6d28d9'},
+    ok:   {bg:'#f0fdf4',border:'#bbf7d0',color:'#166534'},
+    erro: {bg:'#fef2f2',border:'#fecaca',color:'#991b1b'},
+  };
+  const c = cores[tipo]||cores.load;
+  Object.assign(el.style, {background:c.bg, borderColor:c.border, color:c.color});
+  el.innerHTML = msg;
+}
+
+async function gerarAdaptacaoNEE(){
+  const apiKey = (localStorage.getItem('groqApiKey')||'').trim()
+    || (document.getElementById('groqApiKey')?.value||'').trim();
+  if(!apiKey){
+    alert('⚠ Informe a chave da API Groq no modal "Gerar com IA" primeiro.');
+    return;
+  }
+
+  // Perfis selecionados
+  const perfis = [];
+  if(document.getElementById('neeTDAH').checked) perfis.push('TDAH');
+  if(document.getElementById('neeTEA').checked)  perfis.push('Autismo leve (TEA)');
+  if(document.getElementById('neeDIS').checked)  perfis.push('Dislexia');
+  if(document.getElementById('neeBX').checked)   perfis.push('Baixo desempenho');
+  if(!perfis.length){ alert('Selecione ao menos um perfil NEE.'); return; }
+
+  // Opções
+  const opts = {
+    imagens:     document.getElementById('neeImagens').checked,
+    simplificar: document.getElementById('neeSimplificar').checked,
+    frases:      document.getElementById('neeFrases').checked,
+    destaque:    document.getElementById('neeDestaque').checked,
+    numeracao:   document.getElementById('neeNumeracao').checked,
+  };
+
+  const btn = document.getElementById('btnGerarNEE');
+  btn.disabled = true; btn.textContent = '⏳ Adaptando…';
+  setNeeStatus(`⏳ Adaptando ${questoes.length} questão(ões) para <strong>${perfis.join(', ')}</strong>…<br><small>Isso pode levar alguns segundos.</small>`, 'load');
+  document.getElementById('neePreviewWrap').style.display = 'none';
+
+  neeQuestoesAdaptadas = [];
+
+  // Instrução de adaptação para o prompt
+  const instrucoes = [
+    perfis.length ? `O aluno tem: ${perfis.join(', ')}.` : '',
+    opts.simplificar ? 'Simplifique vocabulário complexo sem perder o conteúdo avaliado.' : '',
+    opts.frases      ? 'Quebre frases longas em frases curtas (máx. 20 palavras por frase).' : '',
+    opts.destaque    ? 'Coloque palavras-chave em MAIÚSCULAS ou entre **asteriscos** para indicar negrito.' : '',
+    opts.imagens     ? 'Sugira um emoji ou ícone visual entre colchetes no início do enunciado (ex: [🔬] para ciências).' : '',
+    'Mantenha o conteúdo avaliado, o gabarito e a estrutura da questão.',
+    'Não invente novas alternativas — reescreva as existentes de forma mais clara.',
+    'Responda EXCLUSIVAMENTE em JSON puro: {"enunciado_adaptado":"...","alternativas_adaptadas":[{"letra":"A","texto":"..."},…],"icone":"emoji sugerido ou vazio"}',
+  ].filter(Boolean).join('\n');
+
+  try{
+    for(let i=0; i<questoes.length; i++){
+      const q = questoes[i];
+      setNeeStatus(`⏳ Adaptando questão ${i+1} de ${questoes.length}…`, 'load');
+
+      // Monta representação textual da questão
+      let qTexto = `Enunciado: ${q.enunciado||''}`;
+      if(q.distrator) qTexto = `Contexto/norteador: ${q.distrator}\n${qTexto}`;
+
+      let altsTexto = '';
+      if(q.tipo === 'multipla'){
+        altsTexto = '\nAlternativas:\n' + q.alternativas.map(a=>`${a.letra}) ${a.texto}`).join('\n');
+      } else if(q.tipo === 'somatoria'){
+        altsTexto = '\nAfirmações:\n' + SOMA_SEQ.map((v,idx)=>{
+          const it = q.somatoria[idx]||{txt:''};
+          return `(${String(v).padStart(2,'0')}) ${it.txt}`;
+        }).filter((_,idx)=>q.somatoria[idx]?.txt).join('\n');
+      } else {
+        altsTexto = '\n[Questão discursiva]';
+      }
+
+      const promptNEE = `Você é especialista em educação inclusiva e adaptação de avaliações pedagógicas.
+${instrucoes}
+
+Questão original:
+${qTexto}${altsTexto}
+
+Adapte esta questão conforme as necessidades indicadas.
+Se for discursiva, adapte apenas o enunciado (sem "alternativas_adaptadas").
+JSON de resposta:`;
+
+      const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          temperature: 0.5,
+          max_tokens: 900,
+          messages: [
+            {role:'system', content:'Você é especialista em inclusão escolar e adaptação de avaliações. Responda SEMPRE em JSON puro e válido, sem markdown.'},
+            {role:'user', content: promptNEE}
+          ]
+        })
+      });
+      if(!resp.ok) throw new Error(`Groq HTTP ${resp.status}`);
+      const data = await resp.json();
+      const raw = (data.choices?.[0]?.message?.content||'').trim()
+        .replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
+      let adaptado;
+      try { adaptado = JSON.parse(raw); }
+      catch { const m = raw.match(/\{[\s\S]+\}/); adaptado = m ? JSON.parse(m[0]) : {}; }
+
+      neeQuestoesAdaptadas.push({original: q, adaptado});
+    }
+
+    renderNEEPreview(opts, perfis);
+    setNeeStatus(`✅ Adaptação concluída! ${questoes.length} questão(ões) adaptadas para <strong>${perfis.join(', ')}</strong>.`, 'ok');
+
+  }catch(err){
+    setNeeStatus(`❌ Erro: ${err.message}`, 'erro');
+  }finally{
+    btn.disabled=false; btn.textContent='✨ Gerar Versão Adaptada';
+  }
+}
+
+function renderNEEPreview(opts, perfis){
+  const wrap = document.getElementById('neePreviewWrap');
+  const prev = document.getElementById('neePreview');
+  wrap.style.display = 'block';
+
+  const titulo  = document.getElementById('tituloAval')?.value  || 'AVALIAÇÃO';
+  const escola  = document.getElementById('nomeEscola')?.value  || '';
+  const prof    = document.getElementById('selProf')?.value     || '';
+  const disc    = document.getElementById('selDisc')?.value     || '';
+  const serie   = document.getElementById('selSerie')?.value    || '';
+
+  let html = `<div style="font-size:14px;line-height:1.6;font-family:'IBM Plex Sans',sans-serif;">`;
+  html += `<div style="text-align:center;margin-bottom:16px;">`;
+  if(escola) html += `<div style="font-size:12px;color:#666;">${esc(escola)}</div>`;
+  html += `<div style="font-size:16px;font-weight:700;margin:4px 0;">${esc(titulo)}</div>`;
+  if(disc||serie) html += `<div style="font-size:12px;color:#555;">${esc(disc)} | ${esc(serie)}</div>`;
+  if(prof) html += `<div style="font-size:12px;color:#555;">Prof(a): ${esc(prof)}</div>`;
+  html += `<div style="margin-top:8px;background:#f5f3ff;border-radius:6px;padding:6px 10px;font-size:11px;color:#6d28d9;display:inline-block;">♿ Versão adaptada: ${perfis.join(' · ')}</div>`;
+  html += `</div>`;
+
+  neeQuestoesAdaptadas.forEach(({original: q, adaptado}, idx) => {
+    const num = opts.numeracao ? (NUMS_VISUAIS[idx]||`${idx+1}.`) : `${idx+1}.`;
+    const icone = opts.imagens && adaptado.icone ? adaptado.icone+' ' : '';
+    const enunciado = adaptado.enunciado_adaptado || q.enunciado || '';
+
+    html += `<div class="nee-q-item">`;
+    html += `<div style="font-weight:700;font-size:15px;margin-bottom:6px;">${num} ${icone}</div>`;
+    if(q.distrator){
+      html += `<div style="background:#f8f7ff;border-left:3px solid #7c3aed;padding:8px 10px;margin-bottom:8px;font-size:13px;line-height:1.6;border-radius:0 6px 6px 0;">${esc(q.distrator)}</div>`;
+    }
+    html += `<div style="margin-bottom:10px;">${enunciado.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/[A-ZÁÉÍÓÚÃÕÂÊÔÇ]{4,}/g, w=>`<strong>${w}</strong>`)}</div>`;
+
+    if(q.tipo === 'multipla'){
+      const alts = adaptado.alternativas_adaptadas || q.alternativas;
+      alts.forEach(a => {
+        html += `<div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start;">`;
+        html += `<span style="min-width:24px;font-weight:700;color:#1d4ed8;">${a.letra})</span>`;
+        html += `<span>${esc(a.texto||'')}</span></div>`;
+      });
+    } else if(q.tipo === 'somatoria'){
+      html += `<div style="font-size:12px;color:#666;margin-bottom:6px;">Marque V (verdadeiro) ou F (falso) e some os valores dos itens verdadeiros:</div>`;
+      SOMA_SEQ.forEach((v, i) => {
+        const it = q.somatoria[i];
+        if(!it?.txt) return;
+        html += `<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;">`;
+        html += `<span style="min-width:32px;font-weight:700;color:#7c3aed;font-size:12px;">(${String(v).padStart(2,'0')})</span>`;
+        html += `<span>${esc(it.txt)}</span>`;
+        html += `<span style="margin-left:auto;border:2px solid #ccc;border-radius:4px;padding:2px 10px;font-size:12px;min-width:60px;text-align:center;">&nbsp;V &nbsp; F</span>`;
+        html += `</div>`;
+      });
+    } else {
+      // Discursiva: linha para resposta
+      html += `<div style="margin-top:8px;">`;
+      for(let l=0;l<(q.linhas||4);l++) html += `<div style="border-bottom:1px solid #ccc;height:28px;margin-bottom:4px;"></div>`;
+      html += `</div>`;
+    }
+    html += `</div>`;
+  });
+
+  html += `</div>`;
+  prev.innerHTML = html;
+}
+
+async function exportNEEDocx(){
+  if(!neeQuestoesAdaptadas.length){ alert('Gere a adaptação primeiro.'); return; }
+  // Usa a mesma lógica de exportDOCX mas com fonte 14 / espaçamento 1.5
+  alert('💡 Para exportar em DOCX com fonte 14 e espaçamento 1,5, use o botão 🖨️ Imprimir e salve como PDF, ou copie o conteúdo da prévia.');
+}
+
+function printNEE(){
+  if(!neeQuestoesAdaptadas.length){ alert('Gere a adaptação primeiro.'); return; }
+  const prev = document.getElementById('neePreview').innerHTML;
+  const win = window.open('','_blank','width=800,height=600');
+  win.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <title>Avaliação Adaptada — NEE</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      body{font-family:'IBM Plex Sans',sans-serif;font-size:14px;line-height:1.5;margin:30px 35px;color:#111;}
+      @media print{body{margin:18mm 20mm;}@page{margin:18mm 20mm;}}
+    </style>
+    </head><body>${prev}</body></html>`);
+  win.document.close();
+  win.onload=()=>{ win.focus(); win.print(); };
 }
 
 function addProf(){ const inp=document.getElementById('profNovo'); const v=inp.value.trim(); if(!v||professors.includes(v))return; professors.push(v); inp.value=''; renderProfList(); renderProfSelect(); }
@@ -605,7 +956,10 @@ function buildHTML(_questoes, _versaoLabel){
     else{for(let l=0;l<(q.linhas||4);l++) qsHtml+=`<div style="border-bottom:1px solid #aaa;height:28px;margin-bottom:4px;"></div>`;}
     qsHtml+=`<div style="border-bottom:1px dashed #ddd;margin-top:12px;"></div></div>`;
   });
-  return wrap+qsHtml;
+  return wrap + qsHtml + `
+<div style="border-top:1px solid #ccc;margin-top:18px;padding:8px 0 4px;text-align:center;font-family:Arial,sans-serif;font-size:8pt;color:#888;letter-spacing:.03em;">
+  🤖 Plataforma de Geração de Provas com IA &nbsp;·&nbsp; Prof. Lafaiete Erkmann
+</div>`;
 }
 
 // ── EXPORT PDF ──
@@ -973,6 +1327,20 @@ async function buildAndDownloadDocx(_questoes, _versaoLabel){
   <w:body>
     ${wrapTable}
     ${qsXml}
+    <w:p>
+      <w:pPr>
+        <w:pBdr><w:top w:val="single" w:sz="4" w:space="4" w:color="BBBBBB"/></w:pBdr>
+        <w:spacing w:before="240" w:after="60"/>
+        <w:jc w:val="center"/>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:color w:val="999999"/>
+          <w:sz w:val="14"/><w:szCs w:val="14"/>
+        </w:rPr>
+        <w:t>🤖 Plataforma de Geração de Provas com IA  ·  Prof. Lafaiete Erkmann</w:t>
+      </w:r>
+    </w:p>
     <w:sectPr>
       <w:pgSz w:w="11906" w:h="16838"/>
       <w:pgMar w:top="567" w:right="567" w:bottom="567" w:left="567" w:header="0" w:footer="0" w:gutter="0"/>
@@ -1699,80 +2067,107 @@ async function gerarQuestaoIA(){
       : `\nHabilidade BNCC: ${codigoBncc}`;
   }
 
-  const nivelLabel = iaNivel === 'medio' ? 'Ensino Médio' : 'Ensino Fundamental';
+  const nivelLabel = iaNivel === 'medio' ? 'Ensino Médio' : iaNivel === 'infantil' ? 'Educação Infantil' : 'Ensino Fundamental';
 
-  // Determina número de alternativas conforme formato
+  // Determina alternativas conforme formato
   let letras;
-  if(iaFormato === 'enem' || iaFormato === 'udesc'){
-    letras = ['A','B','C','D','E'];          // sempre 5 alternativas
-  } else if(iaFormato === 'ufsc'){
-    letras = ['A','B','C','D'];              // UFSC: 4 alternativas na múltipla
-  } else {
-    letras = tipoProva === 'em' ? ['A','B','C','D','E'] : ['A','B','C','D'];
-  }
+  if(iaFormato === 'enem' || iaFormato === 'udesc') letras = ['A','B','C','D','E'];
+  else if(iaFormato === 'ufsc')                     letras = ['A','B','C','D'];
+  else letras = tipoProva === 'em' ? ['A','B','C','D','E'] : ['A','B','C','D'];
   const numAlts = letras.length;
 
-  // Contexto de formato para o prompt
+  // Somatória: 7 itens — valores 01 02 04 08 16 32 64 (máx = 127)
+  const SOMA_VALS = [1, 2, 4, 8, 16, 32, 64];
+  const somaMax   = SOMA_VALS.reduce((a,v)=>a+v,0); // 127
+
+  // ─── REGRAS DE ENUNCIADO (injetadas em todos os prompts) ────────────────────
+  const regrasEnunciado = `
+REGRAS OBRIGATÓRIAS PARA O ENUNCIADO:
+1. NUNCA inclua no enunciado palavras ou frases que indiquem a resposta correta (ex: "incorreto", "não é verdade", "exceto", "todos", "nenhum" como pistas diretas).
+2. O enunciado deve apresentar uma SITUAÇÃO, CONTEXTO ou PROBLEMA concreto — NUNCA seja apenas uma pergunta conceitual seca como "O que é fotossíntese?".
+3. Desenvolva a INTERPRETAÇÃO e o RACIOCÍNIO do aluno: parta de uma situação real, dado, trecho, tabela descrita em texto, gráfico descrito, diálogo, notícia, experimento ou cenário fictício plausível.
+4. Linguagem adequada ao ${nivelLabel} — nem simplista demais, nem inacessível.
+5. NÃO mencione "alternativas", "opções" ou "itens" dentro do enunciado.
+6. Imagem: se a questão se beneficiar de uma imagem (gráfico, mapa, tabela, diagrama, figura), preencha "sugestao_imagem" com uma descrição objetiva do que deveria aparecer (ex: "Gráfico de barras comparando população de 5 biomas brasileiros"). Caso contrário, deixe vazio.`;
+
+  // ─── CONTEXTOS DE FORMATO ──────────────────────────────────────────────────
   const formatoCtx = {
-    escola: `Questão didática padrão para ${nivelLabel}. Linguagem acessível e pedagógica.`,
-    ufsc:   `Questão no estilo UFSC (Vestibular UFSC). Linguagem objetiva e rigorosa, enunciados precisos e cientificamente corretos, sem ambiguidades. Nível universitário.`,
-    udesc:  `Questão no estilo UDESC (Vestibular UDESC). Linguagem técnico-científica, 5 alternativas (A a E), pode trazer contexto regional catarinense quando pertinente. Nível universitário.`,
-    enem:   `Questão no estilo ENEM. OBRIGATÓRIO: inclua um texto motivador/distrator contextualizado com situação real do cotidiano, questão interdisciplinar quando possível, linguagem acessível. O enunciado deve partir do contexto apresentado no distrator.`,
+    escola:`Questão didática para ${nivelLabel}. Linguagem acessível, situação do dia a dia escolar ou cotidiano do aluno.`,
+    ufsc:  `Estilo Vestibular UFSC: linguagem rigorosa e precisa, situação baseada em conceito científico, técnico ou histórico. Sem ambiguidades. Evite linguagem coloquial.`,
+    udesc: `Estilo Vestibular UDESC: linguagem técnico-científica, 5 alternativas. Pode contextualizar com dados de Santa Catarina ou Sul do Brasil quando pertinente.`,
+    enem:  `Estilo ENEM: OBRIGATÓRIO um texto norteador (norteador) com 3 a 6 linhas — pode ser trecho jornalístico, literário, científico, dado estatístico ou situação-problema. O enunciado DEVE partir do texto norteador. Abordagem interdisciplinar, cidadania, situações reais e atuais. O norteador e o enunciado NÃO devem entregar a resposta.`,
   }[iaFormato] || '';
 
-  // ────────────────────────────────────────────────
-  // PROMPTS POR TIPO
-  // ────────────────────────────────────────────────
+  // ─── PROMPT MÚLTIPLA ESCOLHA ──────────────────────────────────────────────
+  const promptMultipla = `Você é um elaborador expert em questões pedagógicas e de vestibular.
+ESTILO: ${formatoCtx}
+TEMA/OBJETO: "${objeto}"${bnccCtx}
+DIFICULDADE: ${iaDificuldade}
+NÚMERO DE ALTERNATIVAS: exatamente ${numAlts} (${letras.join(', ')})
+${regrasEnunciado}
 
-  const promptMultipla = `Você é professor especialista em elaboração de questões pedagógicas.
-Estilo: ${formatoCtx}
-Objeto de aprendizagem: "${objeto}".${bnccCtx}
-Nível de dificuldade: ${iaDificuldade}.
-A questão deve ter EXATAMENTE ${numAlts} alternativas (${letras.join(', ')}).
-Responda EXCLUSIVAMENTE em JSON válido, sem explicações, sem markdown:
+Responda EXCLUSIVAMENTE em JSON puro, sem markdown, sem texto fora do JSON:
 {
-  "enunciado": "texto completo da questão",
+  "norteador": "${iaFormato==='enem'?'OBRIGATÓRIO: texto norteador de 3 a 6 linhas (trecho, dado, situação). NÃO entregue a resposta nele.':'texto introdutório ou contexto curto — pode ser vazio'}",
+  "enunciado": "situação-problema ou contexto que exija interpretação e raciocínio — NÃO revela a resposta",
   "consigna": "Assinale a alternativa correta.",
-  "distrator": "${iaFormato==='enem'?'OBRIGATÓRIO: texto motivador contextualizado com situação real':'texto introdutório ou contexto (vazio se não houver)'}",
+  "sugestao_imagem": "descrição objetiva de uma imagem que enriqueceria a questão, ou vazio se não se aplica",
   "alternativas": [
-    {"letra":"A","texto":"texto alternativa A","correta":false},
-    {"letra":"B","texto":"texto alternativa B","correta":true},
-    {"letra":"C","texto":"texto alternativa C","correta":false}${numAlts>3?',\n    {"letra":"D","texto":"texto alternativa D","correta":false}':''}${numAlts>4?',\n    {"letra":"E","texto":"texto alternativa E","correta":false}':''}
+    {"letra":"A","texto":"alternativa plausível mas incorreta","correta":false},
+    {"letra":"B","texto":"alternativa correta — tecnicamente precisa","correta":true},
+    {"letra":"C","texto":"alternativa com erro sutil e plausível","correta":false}${numAlts>3?',\n    {"letra":"D","texto":"alternativa com erro conceitual plausível","correta":false}':''}${numAlts>4?',\n    {"letra":"E","texto":"alternativa com erro sutil diferente dos demais","correta":false}':''}
   ]
 }
-Regras: apenas UMA alternativa correta, gabarito variado (não sempre B), distratores plausíveis e tecnicamente elaborados.`;
+ATENÇÃO: apenas UMA correta. Varie o gabarito (não sempre B). Distratores devem ser convincentes — erros sutis, não absurdos. O enunciado e o norteador NÃO devem conter pistas para a resposta correta.`;
 
-  const promptSomatoria = `Você é professor especialista em elaboração de questões no modelo SOMATÓRIA${iaFormato!=='escola'?' estilo '+iaFormato.toUpperCase():''}.
-Estilo: ${formatoCtx}
-Objeto de aprendizagem: "${objeto}".${bnccCtx}
-Nível de dificuldade: ${iaDificuldade}.
-Crie UMA questão de SOMATÓRIA com exatamente 4 itens (valores 01, 02, 04, 08).
-Cada item é uma afirmação que pode ser VERDADEIRA ou FALSA. O gabarito é a SOMA dos valores dos itens verdadeiros.
-Distribua as afirmações verdadeiras de forma variada (não todas verdadeiras nem todas falsas). A soma do gabarito deve ser um valor entre 1 e 15, preferencialmente não óbvio.
-Responda EXCLUSIVAMENTE em JSON válido, sem explicações, sem markdown:
+  // ─── PROMPT SOMATÓRIA (7 itens: 01 02 04 08 16 32 64 — máx 127) ─────────
+  const promptSomatoria = `Você é um elaborador expert em questões de SOMATÓRIA.
+ESTILO: ${formatoCtx}
+TEMA/OBJETO: "${objeto}"${bnccCtx}
+DIFICULDADE: ${iaDificuldade}
+${regrasEnunciado}
+
+Crie UMA questão de SOMATÓRIA com EXATAMENTE 7 afirmações, com valores (01)(02)(04)(08)(16)(32)(64) — pontuação máxima 127.
+Cada afirmação pode ser VERDADEIRA ou FALSA. O gabarito = soma dos valores dos itens verdadeiros.
+DISTRIBUIÇÃO: entre 3 e 5 itens verdadeiros, de forma não óbvia e variada.
+As afirmações FALSAS devem conter erros sutis, plausíveis — não absurdos.
+As afirmações VERDADEIRAS devem ser tecnicamente corretas e precisas.
+Inclua um CONTEXTO/SITUAÇÃO no enunciado (dados, experimento, cenário) que exija interpretação.
+
+Responda EXCLUSIVAMENTE em JSON puro, sem markdown:
 {
-  "enunciado": "Analise as afirmações sobre ${objeto} e assinale a alternativa que representa a soma dos itens CORRETOS.",
-  "consigna": "Assinale a alternativa que representa a soma das proposições corretas.",
-  "distrator": "texto introdutório ou contexto (vazio se não houver)",
+  "norteador": "${iaFormato==='enem'?'OBRIGATÓRIO: texto norteador de 3 a 6 linhas':'contexto introdutório curto ou vazio'}",
+  "enunciado": "situação ou contexto que contextualiza as afirmações — NÃO revela quais são verdadeiras",
+  "consigna": "Assinale a alternativa que representa a soma correta.",
+  "sugestao_imagem": "descrição de imagem útil à questão, ou vazio",
   "itens": [
-    {"valor":1,"texto":"Afirmação (01): texto da primeira afirmação","correta":true},
-    {"valor":2,"texto":"Afirmação (02): texto da segunda afirmação","correta":false},
-    {"valor":4,"texto":"Afirmação (04): texto da terceira afirmação","correta":true},
-    {"valor":8,"texto":"Afirmação (08): texto da quarta afirmação","correta":false}
+    {"valor":1,  "texto":"texto da afirmação — sem incluir o número","correta":true},
+    {"valor":2,  "texto":"texto da afirmação","correta":false},
+    {"valor":4,  "texto":"texto da afirmação","correta":true},
+    {"valor":8,  "texto":"texto da afirmação","correta":false},
+    {"valor":16, "texto":"texto da afirmação","correta":true},
+    {"valor":32, "texto":"texto da afirmação","correta":false},
+    {"valor":64, "texto":"texto da afirmação","correta":true}
   ]
 }
-ATENÇÃO: os textos das afirmações NÃO devem incluir o valor numérico — isso é inserido automaticamente. As afirmações devem ser objetivas, tecnicamente corretas (quando verdadeiras) ou conter erros sutis e plausíveis (quando falsas).`;
+ATENÇÃO: use EXATAMENTE 7 itens. Textos NÃO devem incluir o valor numérico. O enunciado NÃO deve indicar quais são verdadeiros.`;
 
-  const promptDiscursiva = `Você é professor especialista em elaboração de questões pedagógicas.
-Estilo: ${formatoCtx}
-Objeto de aprendizagem: "${objeto}".${bnccCtx}
-Nível de dificuldade: ${iaDificuldade}.
-Crie UMA questão discursiva / dissertativa.
-Responda EXCLUSIVAMENTE em JSON válido, sem explicações, sem markdown:
+  // ─── PROMPT DISCURSIVA ────────────────────────────────────────────────────
+  const promptDiscursiva = `Você é um elaborador expert em questões dissertativas.
+ESTILO: ${formatoCtx}
+TEMA/OBJETO: "${objeto}"${bnccCtx}
+DIFICULDADE: ${iaDificuldade}
+${regrasEnunciado}
+
+Crie UMA questão discursiva que exija do aluno interpretação, análise e síntese — não apenas memorização.
+A questão deve ter 1 ou 2 partes (a e b) quando a dificuldade for média ou difícil.
+
+Responda EXCLUSIVAMENTE em JSON puro, sem markdown:
 {
-  "enunciado": "texto completo da questão discursiva",
-  "consigna": "Responda com clareza, utilizando os conceitos estudados.",
-  "distrator": "${iaFormato==='enem'?'OBRIGATÓRIO: texto motivador contextualizado com situação real':'texto introdutório ou contexto (vazio se não houver)'}"
+  "norteador": "${iaFormato==='enem'?'OBRIGATÓRIO: texto norteador de 3 a 6 linhas':'contexto introdutório ou vazio'}",
+  "enunciado": "situação-problema que exige interpretação e produção escrita fundamentada",
+  "consigna": "Responda de forma clara e objetiva, fundamentando sua resposta.",
+  "sugestao_imagem": "descrição de imagem útil, ou vazio"
 }`;
 
   const prompt =
@@ -1783,21 +2178,18 @@ Responda EXCLUSIVAMENTE em JSON válido, sem explicações, sem markdown:
   const btn = document.getElementById('btnGerarIA');
   btn.disabled = true;
   btn.innerHTML = '<span class="ia-spin"></span> Gerando…';
-  setIAStatus(`⏳ Consultando Groq AI… gerando questão de <strong>${iaTipoQ}</strong> estilo <strong>${iaFormato.toUpperCase()}</strong>.`, 'load');
+  setIAStatus(`⏳ Gerando questão de <strong>${iaTipoQ}</strong> estilo <strong>${iaFormato.toUpperCase()}</strong>…`, 'load');
 
   try{
     const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
+      headers: {'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        temperature: 0.72,
-        max_tokens: 1200,
+        temperature: 0.78,
+        max_tokens: 1800,
         messages: [
-          { role: 'system', content: 'Você é um especialista em criação de questões pedagógicas e de vestibular alinhadas à BNCC. Responda sempre em JSON válido e puro, sem markdown, sem texto fora do JSON.' },
+          { role: 'system', content: `Você é um elaborador especialista em questões pedagógicas e de vestibular alinhadas à BNCC. Crie questões ricas em contextualização, que desenvolvam interpretação e raciocínio. NUNCA inclua pistas para a resposta dentro do enunciado. Responda SEMPRE em JSON puro e válido, sem markdown, sem texto fora do JSON.` },
           { role: 'user', content: prompt }
         ]
       })
@@ -1808,11 +2200,9 @@ Responda EXCLUSIVAMENTE em JSON válido, sem explicações, sem markdown:
       throw new Error(`Groq API: ${errData?.error?.message || resp.statusText}`);
     }
 
-    const data = await resp.json();
-    const raw  = data.choices?.[0]?.message?.content || '';
-
-    // Extrai JSON da resposta
-    let jsonStr = raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
+    const data   = await resp.json();
+    const raw    = data.choices?.[0]?.message?.content || '';
+    let jsonStr  = raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
     let gerada;
     try { gerada = JSON.parse(jsonStr); }
     catch(pe){
@@ -1821,57 +2211,59 @@ Responda EXCLUSIVAMENTE em JSON válido, sem explicações, sem markdown:
       else throw new Error('Resposta da IA não é JSON válido. Tente novamente.');
     }
 
-    // ── Monta objeto questão ──
-    const letrasQ = letras; // já definido acima com base no formato
+    // Mescla norteador + enunciado no campo distrator/enunciado da questão
+    const norteador = (gerada.norteador||'').trim();
+    const enunciado = (gerada.enunciado||'').trim();
+    const sugestaoImg = (gerada.sugestao_imagem||'').trim();
 
     let novaQ = {
       id:        ++qId,
       tipo:      iaTipoQ,
-      distrator: gerada.distrator || '',
+      distrator: norteador,               // norteador/texto motivador vai pro distrator
       imagem:    null,
-      consigna:  gerada.consigna  || '',
-      enunciado: gerada.enunciado || '',
+      consigna:  gerada.consigna || '',
+      enunciado: enunciado,
       pts:       parseFloat(document.getElementById('ptsDefault').value) || 1,
-      alternativas: letrasQ.map((l,i)=>({letra:l,texto:'',correta:i===0})),
-      somatoria: [{v:1,txt:'',ok:false},{v:2,txt:'',ok:false},{v:4,txt:'',ok:false},{v:8,txt:'',ok:false}],
-      linhas: 4
+      alternativas: letras.map((l,i)=>({letra:l,texto:'',correta:i===0})),
+      somatoria: SOMA_VALS.map(v=>({v, txt:'', ok:false})),
+      linhas:    4
     };
 
     if(iaTipoQ === 'multipla'){
       const altsIA = gerada.alternativas || [];
-      novaQ.alternativas = letrasQ.map((l,i) => ({
+      novaQ.alternativas = letras.map((l,i)=>({
         letra:   l,
         texto:   altsIA[i]?.texto || '',
         correta: !!altsIA[i]?.correta
       }));
-      // Garante que exatamente 1 alternativa é correta
       if(!novaQ.alternativas.some(a=>a.correta)) novaQ.alternativas[0].correta = true;
     }
 
     if(iaTipoQ === 'somatoria'){
       const itensIA = gerada.itens || [];
-      const SOMA_VALS = [1, 2, 4, 8];
-      novaQ.somatoria = SOMA_VALS.map((v, i) => ({
+      novaQ.somatoria = SOMA_VALS.map((v,i)=>({
         v,
         txt: itensIA[i]?.texto || '',
         ok:  !!itensIA[i]?.correta
       }));
       const somaGab = novaQ.somatoria.filter(s=>s.ok).reduce((a,s)=>a+s.v, 0);
-      // Atualiza consigna com o gabarito explícito para revisão
-      novaQ.consigna = gerada.consigna ||
-        `Assinale a alternativa que representa a soma das proposições corretas. (Gabarito: ${somaGab||'?'})`;
+      novaQ.consigna = gerada.consigna || `Assinale a soma das proposições corretas.`;
+      novaQ._gabSoma = somaGab; // para exibir no status
     }
 
     questoes.push(novaQ);
     renderAll();
     updatePts();
 
-    const somaInfo = iaTipoQ==='somatoria'
-      ? ` (gabarito = <strong>${novaQ.somatoria.filter(s=>s.ok).reduce((a,s)=>a+s.v,0)}</strong>)`
-      : '';
+    // Monta mensagem de status
+    let statusExtra = '';
+    if(iaTipoQ==='somatoria') statusExtra = ` — Gabarito = <strong>${novaQ._gabSoma}</strong>`;
+    if(sugestaoImg) statusExtra += `<br>🖼 <em>Sugestão de imagem:</em> ${esc(sugestaoImg)}`;
+
     setIAStatus(
-      `✅ Questão <strong>${iaTipoQ}</strong> estilo <strong>${iaFormato.toUpperCase()}</strong> gerada!`+
-      ` Adicionada como <strong>Questão ${questoes.length}</strong>${somaInfo}. Revise e edite conforme necessário.`,
+      `✅ Questão <strong>${iaTipoQ}</strong> estilo <strong>${iaFormato.toUpperCase()}</strong> gerada! `+
+      `Adicionada como <strong>Questão ${questoes.length}</strong>.${statusExtra}<br>`+
+      `<small style="opacity:.75;">Revise o enunciado, alternativas e insira imagem se necessário.</small>`,
       'ok'
     );
     btn.disabled = false;
