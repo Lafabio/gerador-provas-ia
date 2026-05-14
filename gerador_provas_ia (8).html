@@ -1,0 +1,2352 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Provas</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{--bg:#eeebe6;--sf:#faf9f7;--card:#fff;--br:#d4cfc6;--brs:#a5a09a;--tx:#1a1916;--mu:#7a7570;--ac:#1d4ed8;--acbg:#eff6ff;--dn:#b91c1c;--ok:#166534;--wn:#92400e;--wnbg:#fef9c3;--r:8px;--sh:0 1px 3px rgba(0,0,0,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+.topbar{background:var(--ac);color:#fff;padding:0 18px;height:50px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:300;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.tb-brand{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
+.tb-acts{display:flex;gap:6px}
+.tbtn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;padding:5px 12px;border-radius:6px;cursor:pointer;transition:background .2s}
+.tbtn:hover{background:rgba(255,255,255,.26)}
+.tbtn.prime{background:#fff;color:var(--ac)}
+.tbtn.prime:hover{background:#e0eaff}
+.tbtn:disabled{opacity:.5;cursor:not-allowed}
+/* ── Sidebar retractable ── */
+.app{display:grid;grid-template-columns:295px 1fr;min-height:calc(100vh - 50px);transition:grid-template-columns .25s ease}
+.app.sb-collapsed{grid-template-columns:44px 1fr}
+.sb{background:var(--sf);border-right:1px solid var(--br);padding:13px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:13px;transition:all .25s ease;position:relative}
+.sb-collapsed .sb{padding:10px 6px;overflow:hidden}
+.sb-collapsed .sb-s,.sb-collapsed .sb .fl,.sb-collapsed .slbl,.sb-collapsed .tipo-tg,.sb-collapsed .logo-area,.sb-collapsed .cal-wrap,.sb-collapsed .fr2,.sb-collapsed .cad-list,.sb-collapsed .cad-row{display:none!important}
+.sb-collapsed .sb-action-btns{display:none!important}
+.sb-toggle{position:absolute;top:10px;right:-14px;z-index:200;background:var(--card);border:1px solid var(--br);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.12);transition:transform .25s}
+.sb-toggle:hover{background:var(--acbg);border-color:var(--ac)}
+/* ── NEE Modal ── */
+.nee-chip{display:inline-flex;align-items:center;gap:6px;border:2px solid var(--br);border-radius:8px;padding:8px 14px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;background:var(--bg);color:var(--tx);transition:all .2s;user-select:none}
+.nee-chip input{width:15px;height:15px;accent-color:var(--ac);cursor:pointer}
+.nee-chip:has(input:checked){border-color:var(--ac);background:var(--acbg);color:var(--ac)}
+.nee-preview{background:var(--bg);border:1px solid var(--br);border-radius:8px;padding:12px 14px;max-height:220px;overflow-y:auto;font-size:13.5px;line-height:1.7;font-family:'IBM Plex Sans',sans-serif}
+.nee-q-item{border-bottom:1px dashed var(--br);padding:10px 0;font-size:13.5px;line-height:1.7}
+.sb-s{display:flex;flex-direction:column;gap:7px}
+.slbl{font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding-bottom:4px;border-bottom:1px solid var(--br)}
+.fl{display:flex;flex-direction:column;gap:3px}
+.fl label{font-size:10.5px;font-weight:600;color:var(--mu)}
+.fl input,.fl select,.fl textarea{font-family:'IBM Plex Sans',sans-serif;font-size:12px;background:var(--card);border:1px solid var(--br);color:var(--tx);padding:6px 8px;border-radius:6px;width:100%;transition:border-color .2s}
+.fl input:focus,.fl select:focus,.fl textarea:focus{outline:none;border-color:var(--ac)}
+.fl textarea{resize:vertical;min-height:50px}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.tipo-tg{display:flex;background:var(--bg);border:1px solid var(--br);border-radius:6px;overflow:hidden}
+.tipo-tg button{flex:1;border:none;background:transparent;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:600;padding:7px 4px;cursor:pointer;color:var(--mu);transition:all .2s}
+.tipo-tg button.active{background:var(--ac);color:#fff}
+.cad-list{display:flex;flex-direction:column;gap:4px;max-height:110px;overflow-y:auto}
+.cad-item{display:flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--br);border-radius:5px;padding:4px 8px;font-size:11px}
+.cad-item span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cad-del{background:none;border:none;color:var(--dn);cursor:pointer;font-size:12px;font-weight:700;padding:0 3px}
+.cad-row{display:flex;gap:5px;margin-top:2px}
+.cad-row input{flex:1;font-family:'IBM Plex Sans',sans-serif;font-size:11px;border:1px solid var(--br);background:var(--card);color:var(--tx);padding:5px 8px;border-radius:5px}
+.cad-row input:focus{outline:none;border-color:var(--ac)}
+.cad-btn{background:var(--ac);color:#fff;border:none;font-size:11px;font-weight:700;padding:5px 9px;border-radius:5px;cursor:pointer;white-space:nowrap}
+.logo-area{border:2px dashed var(--br);border-radius:6px;padding:9px;text-align:center;cursor:pointer;background:var(--bg);transition:all .2s;position:relative;min-height:52px;display:flex;align-items:center;justify-content:center}
+.logo-area:hover{border-color:var(--ac);background:var(--acbg)}
+.logo-area input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.logo-area p{font-size:10px;color:var(--mu);pointer-events:none}
+.logo-area img{max-width:100%;max-height:52px;object-fit:contain;pointer-events:none}
+.cal-wrap{position:relative;width:100%}
+.cal-btn{width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:12px;background:var(--card);border:1px solid var(--br);color:var(--tx);padding:6px 8px;border-radius:6px;cursor:pointer;text-align:left;transition:border-color .2s}
+.cal-btn:hover{border-color:var(--ac)}
+.cal-pop{position:absolute;top:calc(100% + 4px);left:0;background:var(--card);border:1px solid var(--br);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.14);z-index:400;padding:10px;width:218px;display:none}
+.cal-pop.open{display:block}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.cal-nav button{background:var(--bg);border:1px solid var(--br);border-radius:5px;width:22px;height:22px;cursor:pointer;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center}
+.cal-nav button:hover{background:var(--acbg);border-color:var(--ac)}
+.cal-my{font-size:12px;font-weight:700}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-lbl{font-size:8.5px;font-weight:700;color:var(--mu);text-align:center;padding:2px 0}
+.cal-d{font-size:11px;text-align:center;padding:4px 1px;border-radius:4px;cursor:pointer;transition:all .15s}
+.cal-d:hover{background:var(--acbg);color:var(--ac)}
+.cal-d.sel{background:var(--ac);color:#fff;font-weight:700}
+.cal-d.today{background:var(--acbg);font-weight:700;color:var(--ac)}
+.cal-d.other-m{color:#ccc}
+.editor{padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:0}
+.pts-bar{max-width:880px;margin:0 auto 12px;background:var(--card);border:1px solid var(--br);border-radius:var(--r);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;font-size:12px;box-shadow:var(--sh)}
+.ptot{font-weight:700;font-size:14px;color:var(--ac)}
+.pwarn{color:var(--dn);font-size:11px;display:none}
+.qw{max-width:880px;margin:0 auto 11px;padding:13px 15px;border:1px solid var(--br);border-radius:var(--r);background:var(--card);box-shadow:var(--sh);position:relative}
+.qw:hover .qctrl{opacity:1}
+.qtop{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.qnum{font-size:12px;font-weight:700;color:var(--ac)}
+.qctrl{opacity:0;transition:opacity .2s;display:flex;gap:4px}
+.qb{background:var(--bg);border:1px solid var(--br);color:var(--mu);font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;transition:all .2s}
+.qb:hover{background:var(--br)}
+.qb.del:hover{background:#fee2e2;border-color:#fca5a5;color:var(--dn)}
+.qb.mv:hover{background:var(--acbg);border-color:var(--ac);color:var(--ac)}
+.qtipo{display:flex;gap:5px;margin-bottom:9px;flex-wrap:wrap;align-items:center}
+.qtipo span{font-size:10px;font-weight:700;color:var(--mu)}
+.qtbtn{border:1px solid var(--br);background:var(--bg);font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;color:var(--mu);transition:all .2s}
+.qtbtn.active{background:var(--ac);color:#fff;border-color:var(--ac)}
+.qf{margin-bottom:7px}
+.qf>label{font-size:10px;font-weight:700;color:var(--mu);display:block;margin-bottom:3px;letter-spacing:.05em;text-transform:uppercase}
+.qf textarea,.qf input[type=text]{width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:12px;border:1px solid var(--br);background:var(--bg);color:var(--tx);padding:6px 8px;border-radius:6px;resize:vertical}
+.qf textarea{min-height:40px}
+.qf textarea:focus,.qf input:focus{outline:none;border-color:var(--ac);background:#fff}
+.imgdrop{border:2px dashed var(--br);border-radius:6px;padding:9px;text-align:center;cursor:pointer;position:relative;background:var(--bg);transition:all .2s}
+.imgdrop:hover{border-color:var(--ac);background:var(--acbg)}
+.imgdrop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.imgdrop p{font-size:10px;color:var(--mu);pointer-events:none}
+.imgdrop img{max-width:100%;max-height:140px;border-radius:4px;pointer-events:none}
+.img-rm{background:#fee2e2;border:1px solid #fca5a5;color:var(--dn);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;margin-top:4px}
+.alts{display:flex;flex-direction:column;gap:5px;margin-top:4px}
+.alt-row{display:flex;align-items:center;gap:7px}
+.alt-l{font-size:11.5px;font-weight:700;color:var(--ac);width:17px;flex-shrink:0}
+.alt-in{flex:1;font-family:'IBM Plex Sans',sans-serif;font-size:12px;border:1px solid var(--br);background:var(--bg);color:var(--tx);padding:5px 8px;border-radius:5px}
+.alt-in:focus{outline:none;border-color:var(--ac);background:#fff}
+.alt-radio{width:14px;height:14px;accent-color:var(--ok);cursor:pointer}
+.alt-rl{font-size:9px;color:var(--mu)}
+.somat{display:flex;flex-direction:column;gap:5px;margin-top:4px}
+.somat-r{display:flex;align-items:center;gap:7px}
+.somat-v{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--wn);width:28px;text-align:right;flex-shrink:0}
+.somat-in{flex:1;font-family:'IBM Plex Sans',sans-serif;font-size:12px;border:1px solid var(--br);background:var(--bg);color:var(--tx);padding:5px 8px;border-radius:5px}
+.somat-in:focus{outline:none;border-color:var(--ac);background:#fff}
+.somat-cb{width:14px;height:14px;accent-color:var(--ok);cursor:pointer}
+.somat-hint{font-size:10.5px;color:var(--wn);background:var(--wnbg);padding:5px 9px;border-radius:5px;margin-top:5px}
+.somat-btns{display:flex;gap:6px;margin-top:6px}
+.somat-add{background:var(--ac);color:#fff;border:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:5px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
+.somat-rem{background:#fee2e2;border:1px solid #fca5a5;color:var(--dn);font-size:11px;font-weight:700;padding:4px 10px;border-radius:5px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
+.somat-add:hover{background:#1e40af}
+.somat-rem:hover{background:#fecaca}
+.pts-in{width:46px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;border:1px solid var(--br);border-radius:5px;padding:2px 5px;text-align:center}
+.add-btn{width:100%;max-width:880px;margin:0 auto 8px;padding:11px;border:2px dashed var(--br);border-radius:var(--r);background:transparent;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;color:var(--mu);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px}
+.add-btn:hover{border-color:var(--ac);color:var(--ac);background:var(--acbg)}
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:flex-start;justify-content:center;padding:18px;overflow-y:auto}
+.modal-ov.hidden{display:none!important}
+.modal-box{background:#fff;border-radius:10px;max-width:860px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal-hd{padding:13px 18px;border-bottom:1px solid var(--br);display:flex;align-items:center;justify-content:space-between}
+.modal-hd h2{font-size:13px;font-weight:700}
+.modal-hd button{background:var(--bg);border:1px solid var(--br);font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
+.modal-bd{padding:18px;max-height:78vh;overflow-y:auto;font-family:Arial,sans-serif;font-size:11pt}
+@media print{
+  .no-print{display:none}
+  .prova-rodape{display:flex!important}
+}
+/* ── Rodapé da prova ── */
+.prova-rodape{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  max-width:880px;
+  margin:18px auto 0;
+  padding:10px 14px;
+  border-top:1px solid var(--br);
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:9.5px;
+  color:var(--mu);
+  letter-spacing:.02em;
+}
+.prova-rodape span{display:flex;align-items:center;gap:5px;}
+.prova-rodape .rod-sep{color:var(--br);font-size:12px;}
+@media print{
+  .prova-rodape{
+    position:fixed;
+    bottom:0;left:0;right:0;
+    max-width:100%;
+    border-top:1px solid #ccc;
+    background:#fff;
+    padding:6px 20mm;
+    margin:0;
+    font-size:8.5pt;
+    color:#888;
+  }
+}
+.ver-btn{background:var(--bg);border:1px solid var(--br);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 14px;border-radius:6px;cursor:pointer;color:var(--mu);transition:all .2s}
+.ver-btn.active{background:var(--ac);color:#fff;border-color:var(--ac)}
+.ver-btn:hover:not(.active){background:var(--acbg);border-color:var(--ac);color:var(--ac)}
+/* IA Modal spinner */
+@keyframes ia-spin{to{transform:rotate(360deg)}}
+.ia-spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:ia-spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+/* BNCC Nav Panel */
+.bncc-tab{background:var(--bg);border:1px solid var(--br);font-family:'IBM Plex Sans',sans-serif;font-size:10.5px;font-weight:600;padding:4px 10px;border-radius:5px;cursor:pointer;color:var(--mu);transition:all .2s}
+.bncc-tab.active{background:var(--ac);color:#fff;border-color:var(--ac)}
+.bncc-tab:hover:not(.active){background:var(--acbg);border-color:var(--ac);color:var(--ac)}
+.bncc-hab-list{display:flex;flex-direction:column;gap:5px;max-height:195px;overflow-y:auto;margin-top:8px;padding-right:2px}
+.bncc-hab-item{background:var(--bg);border:1px solid var(--br);border-radius:6px;padding:8px 10px;cursor:pointer;transition:all .2s}
+.bncc-hab-item:hover{border-color:var(--ac);background:var(--acbg)}
+.bncc-hab-item.selected{border-color:var(--ok);background:#f0fdf4}
+.bncc-cod{font-weight:700;color:var(--ac);font-size:10.5px;margin-bottom:2px;font-family:'IBM Plex Mono',monospace}
+.bncc-desc{color:var(--tx);font-size:10.5px;line-height:1.45}
+.bncc-loading{text-align:center;padding:16px;color:var(--mu);font-size:12px;font-style:italic}
+.bncc-empty{text-align:center;padding:12px;color:var(--mu);font-size:11px;background:var(--bg);border-radius:6px;border:1px dashed var(--br)}
+</style>
+</head>
+<body>
+
+<div class="topbar no-print">
+  <div class="tb-brand">📋 Gerador de Provas</div>
+  <div class="tb-acts">
+    <button class="tbtn" onclick="openPreview()">👁 Pré-visualizar</button>
+    <button class="tbtn" id="btnIA" onclick="openModalIA()" style="background:linear-gradient(135deg,rgba(139,92,246,.9),rgba(59,130,246,.9));border-color:rgba(139,92,246,.5);">🤖 Gerar com IA</button>
+    <button class="tbtn" id="btnShuffle" onclick="openShuffleModal()" title="Gerar versões embaralhadas para evitar cola">🔀 Embaralhar Prova</button>
+    <button class="tbtn" onclick="salvarAvaliacao()" title="Salvar avaliação em arquivo .gprova para editar depois">💾 Salvar</button>
+    <button class="tbtn" onclick="document.getElementById('inputCarregar').click()" title="Carregar avaliação salva">📂 Carregar<input type="file" id="inputCarregar" accept=".gprova" style="display:none" onchange="carregarAvaliacao(this)"></button>
+    <button class="tbtn prime" id="btnExport" onclick="exportPDF()">📄 Exportar PDF</button>
+    <button class="tbtn prime" id="btnDocx" onclick="exportDOCX()">📝 Exportar DOCX</button>
+    <button class="tbtn" onclick="window.print()">🖨️ Imprimir</button>
+  </div>
+</div>
+
+<div class="app">
+<aside class="sb no-print" id="sidebarEl">
+  <!-- Toggle retrair -->
+  <button class="sb-toggle" id="sbToggleBtn" onclick="toggleSidebar()" title="Recolher/expandir menu">◀</button>
+  <div class="sb-s">
+    <div class="slbl">Escola</div>
+    <div class="fl"><label>Nome da Escola</label><input id="nomeEscola" placeholder="Ex: Colégio Municipal..." oninput="autoSave()"></div>
+    <div class="fl"><label>Cidade / UF</label><input id="cidadeEscola" placeholder="Ex: Tubarão – SC" oninput="autoSave()"></div>
+    <div class="fl"><label>Logo</label>
+      <div class="logo-area" onclick="document.getElementById('logoInput').click()">
+        <input type="file" id="logoInput" accept="image/*" onchange="loadLogo(this)" style="display:none">
+        <img id="logoImg" style="display:none"><p id="logoHint">📷 Clique para adicionar logo</p>
+      </div>
+    </div>
+  </div>
+  <div class="sb-s">
+    <div class="slbl">Cadastro de Professores</div>
+    <div class="cad-list" id="profList"></div>
+    <div class="cad-row">
+      <input type="text" id="profNovo" placeholder="Nome do(a) professor(a)…" onkeydown="if(event.key==='Enter')addProf()">
+      <button class="cad-btn" onclick="addProf()">+ Add</button>
+    </div>
+  </div>
+  <div class="sb-s">
+    <div class="slbl">Cadastro de Disciplinas</div>
+    <div class="cad-list" id="discList"></div>
+    <div class="cad-row">
+      <input type="text" id="discNova" placeholder="Nome da disciplina…" onkeydown="if(event.key==='Enter')addDisc()">
+      <button class="cad-btn" onclick="addDisc()">+ Add</button>
+    </div>
+  </div>
+  <div class="sb-s">
+    <div class="slbl">Dados da Avaliação</div>
+    <div class="fl"><label>Título</label><input id="tituloAval" placeholder="Ex: AVALIAÇÃO MENSAL 1" oninput="autoSave()"></div>
+    <div class="fl"><label>Professor(a)</label><select id="selProf" onchange="autoSave()"><option value="">— Selecione —</option></select></div>
+    <div class="fl"><label>Disciplina</label><select id="selDisc" onchange="autoSave()"><option value="">— Selecione —</option></select></div>
+    <div class="fl"><label>Série / Ano</label>
+      <select id="selSerie" onchange="autoSave()">
+        <optgroup label="Ens. Fund. – Anos Iniciais">
+          <option>1º Ano – EF</option><option>2º Ano – EF</option><option>3º Ano – EF</option>
+          <option>4º Ano – EF</option><option>5º Ano – EF</option>
+        </optgroup>
+        <optgroup label="Ens. Fund. – Anos Finais">
+          <option>6º Ano – EF</option><option>7º Ano – EF</option>
+          <option>8º Ano – EF</option><option>9º Ano – EF</option>
+        </optgroup>
+        <optgroup label="Ensino Médio">
+          <option>1ª Série – EM</option><option>2ª Série – EM</option><option>3ª Série – EM</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="fr2">
+      <div class="fl"><label>Turma</label><input id="selTurma" placeholder="Ex: A, 9B…" oninput="autoSave()"></div>
+      <div class="fl"><label>Trimestre</label>
+        <select id="selTrim" onchange="autoSave()">
+          <option>1º</option><option>2º</option><option>3º</option>
+        </select>
+      </div>
+    </div>
+    <div class="fl"><label>Data da Prova</label>
+      <div class="cal-wrap">
+        <button type="button" class="cal-btn" id="calBtn" onclick="toggleCal(event)">Selecionar data…</button>
+        <div class="cal-pop" id="calPop">
+          <div class="cal-nav">
+            <button onclick="calNav(-1)">‹</button>
+            <span class="cal-my" id="calTitle"></span>
+            <button onclick="calNav(1)">›</button>
+          </div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sb-s">
+    <div class="slbl">Tipo de Prova</div>
+    <div class="tipo-tg" id="tipoTg">
+      <button class="active" onclick="setTipoProva('efaf',this)">Fundamental (A–D)</button>
+      <button onclick="setTipoProva('em',this)">Médio (A–E)</button>
+    </div>
+  </div>
+  <div class="sb-s">
+    <div class="slbl">Pontuação padrão por questão</div>
+    <div class="fl"><input id="ptsDefault" type="number" value="1" min="0.1" step="0.1"></div>
+    <div style="font-size:10.5px;color:var(--mu)" id="ptsSummary"></div>
+  </div>
+  <div class="sb-s">
+    <div class="slbl">Instruções no cabeçalho</div>
+    <div class="fl"><textarea id="instrucoes" rows="3" oninput="autoSave()">Sua avaliação será corrigida conforme as opções marcadas. Não rasure! Pinte a alternativa com caneta preta ou azul.</textarea></div>
+  </div>
+  <div class="sb-s sb-action-btns">
+    <button onclick="addQ()" style="width:100%;background:var(--ac);color:#fff;border:none;padding:8px;border-radius:6px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:4px">+ Adicionar Questão</button>
+    <button onclick="openModalNEE()" style="width:100%;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;padding:8px;border-radius:6px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:4px">♿ Adaptar para Inclusão (NEE)</button>
+    <button onclick="resetAll()" style="width:100%;background:var(--bg);color:var(--mu);border:1px solid var(--br);padding:7px;border-radius:6px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;cursor:pointer">🗑 Limpar Tudo</button>
+  </div>
+</aside>
+
+<main class="editor">
+  <div class="pts-bar no-print">
+    <span>Total: <span class="ptot" id="totalPts">10,0</span> pontos</span>
+    <span class="pwarn" id="ptsWarn">⚠ Soma ≠ 10,0</span>
+  </div>
+  <div id="qContainer"></div>
+  <button class="add-btn no-print" onclick="addQ()">＋ Adicionar Questão</button>
+
+  <!-- Rodapé da prova -->
+  <div class="prova-rodape">
+    <span>🤖 Plataforma de Geração de Provas com IA</span>
+    <span class="rod-sep">·</span>
+    <span>Prof. Lafaiete Erkmann</span>
+  </div>
+</main>
+</div>
+
+<!-- MODAL IA GROQ -->
+<div id="modalIA" class="modal-ov hidden">
+  <div class="modal-box" style="max-width:620px;">
+    <div class="modal-hd">
+      <h2>🤖 Gerar Questão com IA (Groq)</h2>
+      <button onclick="closeModalIA()">✕ Fechar</button>
+    </div>
+    <div class="modal-bd" style="font-family:'IBM Plex Sans',sans-serif;display:flex;flex-direction:column;gap:14px;">
+
+      <!-- API KEY -->
+      <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:7px;padding:10px 13px;font-size:11.5px;color:#78350f;">
+        🔑 <strong>Chave de API Groq:</strong> necessária para gerar questões. Gratuita em <a href="https://console.groq.com" target="_blank" style="color:#1d4ed8;">console.groq.com</a>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="password" id="groqApiKey" placeholder="gsk_…" style="flex:1;font-family:'IBM Plex Sans',sans-serif;font-size:12px;border:1px solid var(--br);border-radius:6px;padding:7px 10px;">
+        <button onclick="salvarChaveGroq()" style="background:var(--ac);color:#fff;border:none;font-size:11px;font-weight:700;padding:7px 12px;border-radius:6px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;white-space:nowrap;">💾 Salvar</button>
+      </div>
+
+      <!-- NIVEL -->
+      <div>
+        <label style="font-size:10.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px;">Nível de ensino</label>
+        <div style="display:flex;gap:8px;">
+          <button id="nivelFund" class="ver-btn active" onclick="setNivelIA('fundamental',this)">Ensino Fundamental</button>
+          <button id="nivelMed" class="ver-btn" onclick="setNivelIA('medio',this)">Ensino Médio</button>
+        </div>
+      </div>
+
+      <!-- OBJETO DE APRENDIZAGEM -->
+      <div>
+        <label style="font-size:10.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:4px;">Objeto de Aprendizagem</label>
+        <input type="text" id="iaObjeto" placeholder="Ex: Fotossíntese, Frações, Revolução Industrial…" style="width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:12px;border:1px solid var(--br);border-radius:6px;padding:7px 10px;">
+      </div>
+
+      <!-- HABILIDADE BNCC — painel completo com abas -->
+      <div>
+        <!-- Cabeçalho + toggle abas -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">
+          <label style="font-size:10.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;">
+            Habilidade BNCC
+          </label>
+          <div style="display:flex;gap:4px;">
+            <button class="bncc-tab active" id="bnccTabCod" onclick="setBnccTab('codigo',this)">✏️ Código</button>
+            <button class="bncc-tab" id="bnccTabNav" onclick="setBnccTab('navegar',this)">📚 Navegar</button>
+          </div>
+        </div>
+
+        <!-- ABA: Código direto -->
+        <div id="bnccPanelCodigo">
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="iaBnccCodigo" placeholder="Ex: EF06CI01, EM13CNT101…" style="flex:1;font-family:'IBM Plex Sans',sans-serif;font-size:12px;border:1px solid var(--br);border-radius:6px;padding:7px 10px;" oninput="clearBnccDesc()">
+            <button onclick="buscarBncc()" style="background:var(--ac);color:#fff;border:none;font-size:11px;font-weight:700;padding:7px 12px;border-radius:6px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;white-space:nowrap;" id="btnBuscarBncc">🔍 Buscar</button>
+          </div>
+          <div id="bnccDesc" style="margin-top:6px;font-size:11px;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 10px;display:none;"></div>
+          <div id="bnccErro" style="margin-top:6px;font-size:11px;color:var(--dn);display:none;"></div>
+          <!-- Sugestões -->
+          <div id="bnccSugestoes" style="margin-top:8px;">
+            <span style="font-size:10px;color:var(--mu);">Exemplos: </span>
+            <span id="bnccExemplos" style="font-size:10px;cursor:pointer;"></span>
+          </div>
+        </div>
+
+        <!-- ABA: Navegar na BNCC -->
+        <div id="bnccPanelNavegar" style="display:none;">
+          <!-- Linha 1: Disciplina + Ano -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
+            <div>
+              <label style="font-size:10px;font-weight:700;color:var(--mu);display:block;margin-bottom:3px;">Disciplina / Campo</label>
+              <select id="bnccNavDisc" style="width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:11px;border:1px solid var(--br);border-radius:6px;padding:5px 7px;background:var(--card);color:var(--tx);" onchange="bnccNavAtualizarAnos()">
+                <option value="">— Selecione —</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;color:var(--mu);display:block;margin-bottom:3px;">Ano / Faixa Etária</label>
+              <select id="bnccNavAno" style="width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:11px;border:1px solid var(--br);border-radius:6px;padding:5px 7px;background:var(--card);color:var(--tx);" onchange="bnccNavCarregar()">
+                <option value="">Todos os anos</option>
+              </select>
+            </div>
+          </div>
+          <!-- Botão carregar -->
+          <button onclick="bnccNavCarregar()" style="width:100%;background:var(--ac);color:#fff;border:none;font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;font-weight:700;padding:7px;border-radius:6px;cursor:pointer;margin-bottom:4px;" id="btnBnccNavLoad">⬇ Carregar Habilidades</button>
+          <!-- Lista de habilidades -->
+          <div id="bnccNavHabilidades">
+            <div class="bncc-empty">Selecione a disciplina e clique em <strong>Carregar Habilidades</strong></div>
+          </div>
+          <!-- Habilidade selecionada -->
+          <div id="bnccNavSelecionada" style="display:none;margin-top:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 10px;font-size:11px;color:#166534;"></div>
+        </div>
+      </div>
+
+      <!-- TIPO DE QUESTÃO -->
+      <div>
+        <label style="font-size:10.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px;">Tipo de questão a gerar</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="ver-btn active" id="iaTipoMult"  onclick="setTipoIA('multipla',this)">Múltipla Escolha</button>
+          <button class="ver-btn"        id="iaTipoSomat" onclick="setTipoIA('somatoria',this)">Somatória</button>
+          <button class="ver-btn"        id="iaTipoDisc"  onclick="setTipoIA('discursiva',this)">Discursiva</button>
+        </div>
+        <!-- Hint somatória -->
+        <div id="hintSomatoria" style="display:none;margin-top:7px;font-size:11px;background:#fef9c3;border:1px solid #fde68a;border-radius:6px;padding:7px 10px;color:#78350f;">
+          ⚙️ A IA irá gerar <strong>7 afirmações</strong> com valores <strong>(01)(02)(04)(08)(16)(32)(64)</strong> — pontuação máxima: 127. O gabarito será a soma dos itens verdadeiros. Revise após a geração.
+        </div>
+      </div>
+
+      <!-- FORMATO / VESTIBULAR -->
+      <div>
+        <label style="font-size:10.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px;">
+          Formato / Estilo
+          <span style="font-size:9px;color:var(--mu);font-weight:400;text-transform:none;margin-left:4px;">— molda o estilo da questão gerada</span>
+        </label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="ver-btn active" id="fmtEscola" onclick="setFormatoIA('escola',this)"  title="Questão padrão escolar">🏫 Escola</button>
+          <button class="ver-btn"        id="fmtUFSC"   onclick="setFormatoIA('ufsc',this)"    title="Estilo UFSC — rigor científico, afirmações objetivas">🎓 UFSC</button>
+          <button class="ver-btn"        id="fmtUDESC"  onclick="setFormatoIA('udesc',this)"   title="Estilo UDESC — técnico-científico, 5 alternativas">🎓 UDESC</button>
+          <button class="ver-btn"        id="fmtENEM"   onclick="setFormatoIA('enem',this)"    title="Estilo ENEM — contextualizado, cotidiano, texto motivador">🗒️ ENEM</button>
+        </div>
+        <!-- Descrição do formato selecionado -->
+        <div id="fmtDesc" style="margin-top:6px;font-size:11px;color:var(--mu);padding:5px 0;"></div>
+      </div>
+
+      <!-- DIFICULDADE -->
+      <div>
+        <label style="font-size:10.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px;">Dificuldade</label>
+        <div style="display:flex;gap:8px;">
+          <button class="ver-btn" id="difFacil" onclick="setDifIA('fácil',this)">Fácil</button>
+          <button class="ver-btn active" id="difMedio" onclick="setDifIA('média',this)">Média</button>
+          <button class="ver-btn" id="difDificil" onclick="setDifIA('difícil',this)">Difícil</button>
+        </div>
+      </div>
+
+      <!-- STATUS / RESULTADO -->
+      <div id="iaStatus" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:10px 13px;font-size:12px;color:#1e40af;min-height:40px;"></div>
+
+      <!-- BOTÃO GERAR -->
+      <button id="btnGerarIA" onclick="gerarQuestaoIA()" style="background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;border:none;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:700;padding:12px;border-radius:7px;cursor:pointer;width:100%;transition:opacity .2s;">
+        ✨ Gerar Questão com IA
+      </button>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EMBARALHAR -->
+<div id="modalShuffle" class="modal-ov hidden">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-hd">
+      <h2>🔀 Embaralhar Prova — Anti-Cola</h2>
+      <button onclick="closeShuffleModal()">✕ Fechar</button>
+    </div>
+    <div class="modal-bd" style="font-family:'IBM Plex Sans',sans-serif;">
+      <p style="font-size:12px;color:#555;margin-bottom:14px;">Gere <strong>versões diferentes</strong> da prova com questões e/ou alternativas em ordens distintas. Cada versão terá seu gabarito atualizado automaticamente.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+          <input type="checkbox" id="shuffleQuestoes" checked style="width:15px;height:15px;accent-color:var(--ac);">
+          <span>Embaralhar <strong>ordem das questões</strong></span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+          <input type="checkbox" id="shuffleAlternativas" checked style="width:15px;height:15px;accent-color:var(--ac);">
+          <span>Embaralhar <strong>alternativas</strong> (Múltipla Escolha)</span>
+        </label>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:11px;font-weight:700;color:var(--mu);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em;">Quantidade de versões</label>
+        <div style="display:flex;gap:8px;" id="versoesbtns">
+          <button class="ver-btn active" onclick="setVersoes(2,this)">2 versões</button>
+          <button class="ver-btn" onclick="setVersoes(3,this)">3 versões</button>
+          <button class="ver-btn" onclick="setVersoes(4,this)">4 versões</button>
+        </div>
+      </div>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:10px 13px;font-size:11.5px;color:#1e40af;margin-bottom:16px;">
+        ℹ️ <strong>HTML:</strong> Cada versão abre em nova aba para impressão. <strong>DOCX:</strong> Baixa um arquivo .docx por versão com gabarito incluso.
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="gerarVersoesEmbaralhadas()" style="flex:1;background:var(--ac);color:#fff;border:none;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:700;padding:11px;border-radius:7px;cursor:pointer;">🔀 Gerar Versões (HTML)</button>
+        <button onclick="gerarVersoesDocx()" style="flex:1;background:#166534;color:#fff;border:none;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:700;padding:11px;border-radius:7px;cursor:pointer;" id="btnShuffleDocx">📝 Exportar Versões DOCX</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-ov hidden" id="modalPreview">
+  <div class="modal-box">
+    <div class="modal-hd"><h2>Pré-visualização da Prova</h2><button onclick="closePreview()">✕ Fechar</button></div>
+    <div class="modal-bd" id="modalBd"></div>
+  </div>
+</div>
+
+<!-- MODAL ADAPTAÇÃO INCLUSIVA (NEE) -->
+<div class="modal-ov hidden" id="modalNEE">
+  <div class="modal-box" style="max-width:680px;">
+    <div class="modal-hd">
+      <h2>♿ Adaptar Avaliação para Inclusão (NEE)</h2>
+      <button onclick="closeModalNEE()">✕ Fechar</button>
+    </div>
+    <div class="modal-bd" style="font-family:'IBM Plex Sans',sans-serif;display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Info -->
+      <div style="background:#f5f3ff;border:1px solid #c4b5fd;border-radius:7px;padding:10px 13px;font-size:11.5px;color:#4c1d95;">
+        🧠 A IA irá reescrever as questões da prova atual adaptando linguagem, estrutura e apresentação para as necessidades indicadas.
+        A versão adaptada será gerada com <strong>fonte 14pt e espaçamento 1,5</strong>, pronta para impressão.
+      </div>
+
+      <!-- Perfil NEE -->
+      <div>
+        <label style="font-size:10.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:8px;">Perfil do aluno — selecione um ou mais:</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <label class="nee-chip"><input type="checkbox" id="neeTDAH" value="tdah"> 🧩 TDAH</label>
+          <label class="nee-chip"><input type="checkbox" id="neeTEA"  value="tea">  🌈 Autismo leve (TEA)</label>
+          <label class="nee-chip"><input type="checkbox" id="neeDIS"  value="dis">  📖 Dislexia</label>
+          <label class="nee-chip"><input type="checkbox" id="neeBX"   value="bx">   🐢 Baixo desempenho</label>
+        </div>
+      </div>
+
+      <!-- Opções de adaptação -->
+      <div>
+        <label style="font-size:10.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:8px;">Adaptações adicionais:</label>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="neeImagens" checked style="accent-color:var(--ac);width:14px;height:14px;"> Sugerir ícone/símbolo visual ao lado de cada questão</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="neeSimplificar" checked style="accent-color:var(--ac);width:14px;height:14px;"> Simplificar vocabulário complexo mantendo o conteúdo</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="neeFrases" checked style="accent-color:var(--ac);width:14px;height:14px;"> Quebrar enunciados longos em frases curtas</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="neeDestaque" checked style="accent-color:var(--ac);width:14px;height:14px;"> Destacar palavras-chave em <strong>negrito</strong></label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="neeNumeracao" checked style="accent-color:var(--ac);width:14px;height:14px;"> Numeração visual grande por questão (①②③…)</label>
+        </div>
+      </div>
+
+      <!-- Botão gerar -->
+      <button id="btnGerarNEE" onclick="gerarAdaptacaoNEE()" style="background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;padding:10px;border-radius:7px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+        ✨ Gerar Versão Adaptada
+      </button>
+
+      <!-- Status -->
+      <div id="neeStatus" style="display:none;border-radius:7px;padding:10px 13px;font-size:12px;border:1px solid;"></div>
+
+      <!-- Preview -->
+      <div id="neePreviewWrap" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <label style="font-size:10.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;">Prévia da versão adaptada</label>
+          <div style="display:flex;gap:6px;">
+            <button onclick="exportNEEDocx()" style="background:var(--ac);color:#fff;border:none;font-size:11px;font-weight:700;padding:6px 12px;border-radius:6px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;">📝 Exportar DOCX</button>
+            <button onclick="printNEE()" style="background:var(--bg);border:1px solid var(--br);font-size:11px;font-weight:700;padding:6px 12px;border-radius:6px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;">🖨️ Imprimir</button>
+          </div>
+        </div>
+        <div class="nee-preview" id="neePreview"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── ESTADO ──
+let tipoProva='efaf', questoes=[], qId=0, logoB64=null;
+let professors=[], disciplinas=[], selectedDate=null;
+let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
+const LEM=['A','B','C','D','E'], LEF=['A','B','C','D'];
+const SOMA_SEQ=[1,2,4,8,16,32,64];
+
+window.addEventListener('DOMContentLoaded',()=>{
+  ['Português','Matemática','Ciências','História','Geografia','Inglês','Arte','Educação Física','Biologia','Física','Química','Filosofia','Sociologia','Redação'].forEach(d=>addDiscItem(d));
+  for(let i=0;i<10;i++) addQ(i<2?'discursiva':'multipla');
+  renderCal(); updatePts();
+  document.addEventListener('click',e=>{ if(!e.target.closest('.cal-wrap')) document.getElementById('calPop').classList.remove('open'); });
+});
+
+function loadLogo(inp){
+  if(!inp.files[0])return;
+  const r=new FileReader();
+  r.onload=e=>{ logoB64=e.target.result; const img=document.getElementById('logoImg'); img.src=logoB64; img.style.display='block'; document.getElementById('logoHint').style.display='none'; };
+  r.readAsDataURL(inp.files[0]);
+}
+
+// ── Sidebar retractable ──
+function toggleSidebar(){
+  const app = document.querySelector('.app');
+  const btn = document.getElementById('sbToggleBtn');
+  const collapsed = app.classList.toggle('sb-collapsed');
+  btn.textContent = collapsed ? '▶' : '◀';
+  btn.title = collapsed ? 'Expandir menu' : 'Recolher menu';
+}
+
+// ══════════════════════════════════════════════════════════════
+// ADAPTAÇÃO INCLUSIVA (NEE) — TDAH / TEA / Dislexia
+// ══════════════════════════════════════════════════════════════
+let neeQuestoesAdaptadas = [];
+
+const NUMS_VISUAIS = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮'];
+
+function openModalNEE(){
+  if(!questoes.length){ alert('Adicione questões à avaliação antes de adaptar.'); return; }
+  document.getElementById('modalNEE').classList.remove('hidden');
+  document.getElementById('neePreviewWrap').style.display = 'none';
+  document.getElementById('neeStatus').style.display = 'none';
+  neeQuestoesAdaptadas = [];
+}
+function closeModalNEE(){ document.getElementById('modalNEE').classList.add('hidden'); }
+
+function setNeeStatus(msg, tipo){
+  const el = document.getElementById('neeStatus');
+  el.style.display = 'block';
+  const cores = {
+    load: {bg:'#faf5ff',border:'#e9d5ff',color:'#6d28d9'},
+    ok:   {bg:'#f0fdf4',border:'#bbf7d0',color:'#166534'},
+    erro: {bg:'#fef2f2',border:'#fecaca',color:'#991b1b'},
+  };
+  const c = cores[tipo]||cores.load;
+  Object.assign(el.style, {background:c.bg, borderColor:c.border, color:c.color});
+  el.innerHTML = msg;
+}
+
+async function gerarAdaptacaoNEE(){
+  const apiKey = (localStorage.getItem('groqApiKey')||'').trim()
+    || (document.getElementById('groqApiKey')?.value||'').trim();
+  if(!apiKey){
+    alert('⚠ Informe a chave da API Groq no modal "Gerar com IA" primeiro.');
+    return;
+  }
+
+  // Perfis selecionados
+  const perfis = [];
+  if(document.getElementById('neeTDAH').checked) perfis.push('TDAH');
+  if(document.getElementById('neeTEA').checked)  perfis.push('Autismo leve (TEA)');
+  if(document.getElementById('neeDIS').checked)  perfis.push('Dislexia');
+  if(document.getElementById('neeBX').checked)   perfis.push('Baixo desempenho');
+  if(!perfis.length){ alert('Selecione ao menos um perfil NEE.'); return; }
+
+  // Opções
+  const opts = {
+    imagens:     document.getElementById('neeImagens').checked,
+    simplificar: document.getElementById('neeSimplificar').checked,
+    frases:      document.getElementById('neeFrases').checked,
+    destaque:    document.getElementById('neeDestaque').checked,
+    numeracao:   document.getElementById('neeNumeracao').checked,
+  };
+
+  const btn = document.getElementById('btnGerarNEE');
+  btn.disabled = true; btn.textContent = '⏳ Adaptando…';
+  setNeeStatus(`⏳ Adaptando ${questoes.length} questão(ões) para <strong>${perfis.join(', ')}</strong>…<br><small>Isso pode levar alguns segundos.</small>`, 'load');
+  document.getElementById('neePreviewWrap').style.display = 'none';
+
+  neeQuestoesAdaptadas = [];
+
+  // Instrução de adaptação para o prompt
+  const instrucoes = [
+    perfis.length ? `O aluno tem: ${perfis.join(', ')}.` : '',
+    opts.simplificar ? 'Simplifique vocabulário complexo sem perder o conteúdo avaliado.' : '',
+    opts.frases      ? 'Quebre frases longas em frases curtas (máx. 20 palavras por frase).' : '',
+    opts.destaque    ? 'Coloque palavras-chave em MAIÚSCULAS ou entre **asteriscos** para indicar negrito.' : '',
+    opts.imagens     ? 'Sugira um emoji ou ícone visual entre colchetes no início do enunciado (ex: [🔬] para ciências).' : '',
+    'Mantenha o conteúdo avaliado, o gabarito e a estrutura da questão.',
+    'Não invente novas alternativas — reescreva as existentes de forma mais clara.',
+    'Responda EXCLUSIVAMENTE em JSON puro: {"enunciado_adaptado":"...","alternativas_adaptadas":[{"letra":"A","texto":"..."},…],"icone":"emoji sugerido ou vazio"}',
+  ].filter(Boolean).join('\n');
+
+  try{
+    for(let i=0; i<questoes.length; i++){
+      const q = questoes[i];
+      setNeeStatus(`⏳ Adaptando questão ${i+1} de ${questoes.length}…`, 'load');
+
+      // Monta representação textual da questão
+      let qTexto = `Enunciado: ${q.enunciado||''}`;
+      if(q.distrator) qTexto = `Contexto/norteador: ${q.distrator}\n${qTexto}`;
+
+      let altsTexto = '';
+      if(q.tipo === 'multipla'){
+        altsTexto = '\nAlternativas:\n' + q.alternativas.map(a=>`${a.letra}) ${a.texto}`).join('\n');
+      } else if(q.tipo === 'somatoria'){
+        altsTexto = '\nAfirmações:\n' + SOMA_SEQ.map((v,idx)=>{
+          const it = q.somatoria[idx]||{txt:''};
+          return `(${String(v).padStart(2,'0')}) ${it.txt}`;
+        }).filter((_,idx)=>q.somatoria[idx]?.txt).join('\n');
+      } else {
+        altsTexto = '\n[Questão discursiva]';
+      }
+
+      const promptNEE = `Você é especialista em educação inclusiva e adaptação de avaliações pedagógicas.
+${instrucoes}
+
+Questão original:
+${qTexto}${altsTexto}
+
+Adapte esta questão conforme as necessidades indicadas.
+Se for discursiva, adapte apenas o enunciado (sem "alternativas_adaptadas").
+JSON de resposta:`;
+
+      const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          temperature: 0.5,
+          max_tokens: 900,
+          messages: [
+            {role:'system', content:'Você é especialista em inclusão escolar e adaptação de avaliações. Responda SEMPRE em JSON puro e válido, sem markdown.'},
+            {role:'user', content: promptNEE}
+          ]
+        })
+      });
+      if(!resp.ok) throw new Error(`Groq HTTP ${resp.status}`);
+      const data = await resp.json();
+      const raw = (data.choices?.[0]?.message?.content||'').trim()
+        .replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
+      let adaptado;
+      try { adaptado = JSON.parse(raw); }
+      catch { const m = raw.match(/\{[\s\S]+\}/); adaptado = m ? JSON.parse(m[0]) : {}; }
+
+      neeQuestoesAdaptadas.push({original: q, adaptado});
+    }
+
+    renderNEEPreview(opts, perfis);
+    setNeeStatus(`✅ Adaptação concluída! ${questoes.length} questão(ões) adaptadas para <strong>${perfis.join(', ')}</strong>.`, 'ok');
+
+  }catch(err){
+    setNeeStatus(`❌ Erro: ${err.message}`, 'erro');
+  }finally{
+    btn.disabled=false; btn.textContent='✨ Gerar Versão Adaptada';
+  }
+}
+
+function renderNEEPreview(opts, perfis){
+  const wrap = document.getElementById('neePreviewWrap');
+  const prev = document.getElementById('neePreview');
+  wrap.style.display = 'block';
+
+  const titulo  = document.getElementById('tituloAval')?.value  || 'AVALIAÇÃO';
+  const escola  = document.getElementById('nomeEscola')?.value  || '';
+  const prof    = document.getElementById('selProf')?.value     || '';
+  const disc    = document.getElementById('selDisc')?.value     || '';
+  const serie   = document.getElementById('selSerie')?.value    || '';
+
+  let html = `<div style="font-size:14px;line-height:1.6;font-family:'IBM Plex Sans',sans-serif;">`;
+  html += `<div style="text-align:center;margin-bottom:16px;">`;
+  if(escola) html += `<div style="font-size:12px;color:#666;">${esc(escola)}</div>`;
+  html += `<div style="font-size:16px;font-weight:700;margin:4px 0;">${esc(titulo)}</div>`;
+  if(disc||serie) html += `<div style="font-size:12px;color:#555;">${esc(disc)} | ${esc(serie)}</div>`;
+  if(prof) html += `<div style="font-size:12px;color:#555;">Prof(a): ${esc(prof)}</div>`;
+  html += `<div style="margin-top:8px;background:#f5f3ff;border-radius:6px;padding:6px 10px;font-size:11px;color:#6d28d9;display:inline-block;">♿ Versão adaptada: ${perfis.join(' · ')}</div>`;
+  html += `</div>`;
+
+  neeQuestoesAdaptadas.forEach(({original: q, adaptado}, idx) => {
+    const num = opts.numeracao ? (NUMS_VISUAIS[idx]||`${idx+1}.`) : `${idx+1}.`;
+    const icone = opts.imagens && adaptado.icone ? adaptado.icone+' ' : '';
+    const enunciado = adaptado.enunciado_adaptado || q.enunciado || '';
+
+    html += `<div class="nee-q-item">`;
+    html += `<div style="font-weight:700;font-size:15px;margin-bottom:6px;">${num} ${icone}</div>`;
+    if(q.distrator){
+      html += `<div style="background:#f8f7ff;border-left:3px solid #7c3aed;padding:8px 10px;margin-bottom:8px;font-size:13px;line-height:1.6;border-radius:0 6px 6px 0;">${esc(q.distrator)}</div>`;
+    }
+    html += `<div style="margin-bottom:10px;">${enunciado.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/[A-ZÁÉÍÓÚÃÕÂÊÔÇ]{4,}/g, w=>`<strong>${w}</strong>`)}</div>`;
+
+    if(q.tipo === 'multipla'){
+      const alts = adaptado.alternativas_adaptadas || q.alternativas;
+      alts.forEach(a => {
+        html += `<div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start;">`;
+        html += `<span style="min-width:24px;font-weight:700;color:#1d4ed8;">${a.letra})</span>`;
+        html += `<span>${esc(a.texto||'')}</span></div>`;
+      });
+    } else if(q.tipo === 'somatoria'){
+      html += `<div style="font-size:12px;color:#666;margin-bottom:6px;">Marque V (verdadeiro) ou F (falso) e some os valores dos itens verdadeiros:</div>`;
+      SOMA_SEQ.forEach((v, i) => {
+        const it = q.somatoria[i];
+        if(!it?.txt) return;
+        html += `<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;">`;
+        html += `<span style="min-width:32px;font-weight:700;color:#7c3aed;font-size:12px;">(${String(v).padStart(2,'0')})</span>`;
+        html += `<span>${esc(it.txt)}</span>`;
+        html += `<span style="margin-left:auto;border:2px solid #ccc;border-radius:4px;padding:2px 10px;font-size:12px;min-width:60px;text-align:center;">&nbsp;V &nbsp; F</span>`;
+        html += `</div>`;
+      });
+    } else {
+      // Discursiva: linha para resposta
+      html += `<div style="margin-top:8px;">`;
+      for(let l=0;l<(q.linhas||4);l++) html += `<div style="border-bottom:1px solid #ccc;height:28px;margin-bottom:4px;"></div>`;
+      html += `</div>`;
+    }
+    html += `</div>`;
+  });
+
+  html += `</div>`;
+  prev.innerHTML = html;
+}
+
+async function exportNEEDocx(){
+  if(!neeQuestoesAdaptadas.length){ alert('Gere a adaptação primeiro.'); return; }
+  // Usa a mesma lógica de exportDOCX mas com fonte 14 / espaçamento 1.5
+  alert('💡 Para exportar em DOCX com fonte 14 e espaçamento 1,5, use o botão 🖨️ Imprimir e salve como PDF, ou copie o conteúdo da prévia.');
+}
+
+function printNEE(){
+  if(!neeQuestoesAdaptadas.length){ alert('Gere a adaptação primeiro.'); return; }
+  const prev = document.getElementById('neePreview').innerHTML;
+  const win = window.open('','_blank','width=800,height=600');
+  win.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <title>Avaliação Adaptada — NEE</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      body{font-family:'IBM Plex Sans',sans-serif;font-size:14px;line-height:1.5;margin:30px 35px;color:#111;}
+      @media print{body{margin:18mm 20mm;}@page{margin:18mm 20mm;}}
+    </style>
+    </head><body>${prev}</body></html>`);
+  win.document.close();
+  win.onload=()=>{ win.focus(); win.print(); };
+}
+
+function addProf(){ const inp=document.getElementById('profNovo'); const v=inp.value.trim(); if(!v||professors.includes(v))return; professors.push(v); inp.value=''; renderProfList(); renderProfSelect(); }
+function delProf(i){ professors.splice(i,1); renderProfList(); renderProfSelect(); }
+function renderProfList(){ document.getElementById('profList').innerHTML=professors.map((p,i)=>`<div class="cad-item"><span>${p}</span><button class="cad-del" onclick="delProf(${i})">✕</button></div>`).join(''); }
+function renderProfSelect(){ const sel=document.getElementById('selProf'); const cur=sel.value; sel.innerHTML='<option value="">— Selecione —</option>'+professors.map(p=>`<option value="${p}">${p}</option>`).join(''); if(professors.includes(cur)) sel.value=cur; }
+
+function addDisc(){ const inp=document.getElementById('discNova'); const v=inp.value.trim(); if(!v||disciplinas.includes(v))return; addDiscItem(v); inp.value=''; }
+function addDiscItem(v){ if(disciplinas.includes(v))return; disciplinas.push(v); renderDiscList(); renderDiscSelect(); }
+function delDisc(i){ disciplinas.splice(i,1); renderDiscList(); renderDiscSelect(); }
+function renderDiscList(){ document.getElementById('discList').innerHTML=disciplinas.map((d,i)=>`<div class="cad-item"><span>${d}</span><button class="cad-del" onclick="delDisc(${i})">✕</button></div>`).join(''); }
+function renderDiscSelect(){ const sel=document.getElementById('selDisc'); const cur=sel.value; sel.innerHTML='<option value="">— Selecione —</option>'+disciplinas.map(d=>`<option value="${d}">${d}</option>`).join(''); if(disciplinas.includes(cur)) sel.value=cur; }
+
+const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DIAS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+function toggleCal(e){ if(e) e.stopPropagation(); document.getElementById('calPop').classList.toggle('open'); }
+function calNav(d){ calMonth+=d; if(calMonth>11){calMonth=0;calYear++;}else if(calMonth<0){calMonth=11;calYear--;} renderCal(); }
+function renderCal(){
+  document.getElementById('calTitle').textContent=`${MESES[calMonth]} ${calYear}`;
+  const grid=document.getElementById('calGrid');
+  grid.innerHTML=DIAS.map(d=>`<div class="cal-lbl">${d}</div>`).join('');
+  const first=new Date(calYear,calMonth,1).getDay(), days=new Date(calYear,calMonth+1,0).getDate();
+  const today=new Date(), prevDays=new Date(calYear,calMonth,0).getDate();
+  for(let i=first-1;i>=0;i--) grid.innerHTML+=`<div class="cal-d other-m">${prevDays-i}</div>`;
+  for(let d=1;d<=days;d++){
+    const isSel=selectedDate&&selectedDate.y===calYear&&selectedDate.m===calMonth&&selectedDate.d===d;
+    const isToday=today.getFullYear()===calYear&&today.getMonth()===calMonth&&today.getDate()===d;
+    grid.innerHTML+=`<div class="cal-d${isSel?' sel':isToday?' today':''}" onclick="pickDate(${d})">${d}</div>`;
+  }
+}
+function pickDate(d){
+  selectedDate={y:calYear,m:calMonth,d};
+  document.getElementById('calBtn').textContent=`${String(d).padStart(2,'0')}/${String(calMonth+1).padStart(2,'0')}/${calYear}`;
+  document.getElementById('calPop').classList.remove('open'); renderCal();
+}
+
+function setTipoProva(t,btn){ tipoProva=t; document.querySelectorAll('#tipoTg button').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderAll(); }
+
+function addQ(tipo){
+  tipo=tipo||'multipla';
+  const letras=tipoProva==='em'?[...LEM]:[...LEF];
+  questoes.push({id:++qId,tipo,distrator:'',imagem:null,consigna:'',enunciado:'',pts:parseFloat(document.getElementById('ptsDefault').value)||1,alternativas:letras.map((l,i)=>({letra:l,texto:'',correta:i===0})),somatoria:[{v:1,txt:'',ok:false},{v:2,txt:'',ok:false},{v:4,txt:'',ok:false},{v:8,txt:'',ok:false}],linhas:4});
+  renderQ(questoes[questoes.length-1]); updatePts();
+}
+function delQ(id){ if(questoes.length<=1){alert('A prova precisa ter ao menos 1 questão.');return;} if(!confirm('Remover esta questão?'))return; questoes=questoes.filter(q=>q.id!==id); renderAll(); updatePts(); }
+function moveQ(id,dir){ const i=questoes.findIndex(q=>q.id===id),ni=i+dir; if(ni<0||ni>=questoes.length)return; [questoes[i],questoes[ni]]=[questoes[ni],questoes[i]]; renderAll(); }
+function dupQ(id){ const q=questoes.find(q=>q.id===id); if(!q)return; const nq=JSON.parse(JSON.stringify(q)); nq.id=++qId; questoes.splice(questoes.findIndex(q=>q.id===id)+1,0,nq); renderAll(); updatePts(); }
+function setTipoQ(id,tipo){ const q=questoes.find(q=>q.id===id); if(!q)return; q.tipo=tipo; if(tipo==='multipla'){const letras=tipoProva==='em'?[...LEM]:[...LEF]; q.alternativas=letras.map((l,i)=>({letra:l,texto:q.alternativas[i]?q.alternativas[i].texto:'',correta:i===0}));} renderAll(); }
+function addSomatItem(id){ const q=questoes.find(q=>q.id===id); if(!q)return; const used=q.somatoria.map(s=>s.v),next=SOMA_SEQ.find(v=>!used.includes(v)); if(!next){alert('Todos os valores já foram adicionados.');return;} q.somatoria.push({v:next,txt:'',ok:false}); q.somatoria.sort((a,b)=>SOMA_SEQ.indexOf(a.v)-SOMA_SEQ.indexOf(b.v)); renderAll(); }
+function remSomatItem(id){ const q=questoes.find(q=>q.id===id); if(!q||q.somatoria.length<=1){alert('Mínimo de 1 item.');return;} q.somatoria.pop(); renderAll(); }
+
+function renderAll(){ document.getElementById('qContainer').innerHTML=''; questoes.forEach(q=>renderQ(q)); }
+function renderQ(q){
+  const cont=document.getElementById('qContainer'),num=questoes.indexOf(q)+1,numStr=String(num).padStart(2,'0');
+  const letras=tipoProva==='em'?[...LEM]:[...LEF];
+  if(q.tipo==='multipla'&&q.alternativas.length!==letras.length) q.alternativas=letras.map((l,i)=>({letra:l,texto:q.alternativas[i]?q.alternativas[i].texto:'',correta:i===0}));
+  const div=document.createElement('div'); div.className='qw'; div.id='qw-'+q.id;
+  const imgHTML=q.imagem?`<img src="${q.imagem}"><br><button class="img-rm" onclick="event.stopPropagation();rmImg(${q.id})">✕ Remover imagem</button>`:'<p>📷 Clique para adicionar imagem (opcional)</p>';
+  let tipoArea='';
+  if(q.tipo==='multipla'){
+    tipoArea=`<div class="qf"><label>Alternativas <span style="color:var(--mu);font-weight:400;font-size:9px;">(marque o gabarito)</span></label><div class="alts">${q.alternativas.map((a,i)=>`<div class="alt-row"><span class="alt-l">${a.letra})</span><input class="alt-in" type="text" value="${esc(a.texto)}" placeholder="Alternativa ${a.letra}…" oninput="setAlt(${q.id},${i},this.value)"><input type="radio" class="alt-radio" name="gab-${q.id}" ${a.correta?'checked':''} onchange="setAltOk(${q.id},${i})"><span class="alt-rl">Gabarito</span></div>`).join('')}</div></div>`;
+  } else if(q.tipo==='somatoria'){
+    const soma=q.somatoria.filter(s=>s.ok).reduce((a,s)=>a+s.v,0);
+    tipoArea=`<div class="qf"><label>Itens da Somatória</label><div class="somat">${q.somatoria.map((s,i)=>`<div class="somat-r"><span class="somat-v">(${String(s.v).padStart(2,'0')})</span><input class="somat-in" type="text" value="${esc(s.txt)}" placeholder="Afirmativa…" oninput="setSomat(${q.id},${i},'txt',this.value)"><input type="checkbox" class="somat-cb" ${s.ok?'checked':''} onchange="setSomat(${q.id},${i},'ok',this.checked)"><span class="alt-rl">✓</span></div>`).join('')}</div><div class="somat-hint" id="somat-hint-${q.id}">Gabarito: <strong>${soma||'—'}</strong></div><div class="somat-btns"><button class="somat-add" onclick="addSomatItem(${q.id})" ${q.somatoria.length<SOMA_SEQ.length?'':'disabled'}>+ Item</button><button class="somat-rem" onclick="remSomatItem(${q.id})" ${q.somatoria.length>1?'':'disabled'}>− Remover</button></div></div>`;
+  } else {
+    tipoArea=`<div class="qf"><label>Linhas para resposta discursiva</label><div style="display:flex;align-items:center;gap:8px;margin-top:4px;"><input type="number" value="${q.linhas}" min="1" max="20" style="width:60px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;border:1px solid var(--br);border-radius:5px;padding:4px 7px;" oninput="setF(${q.id},'linhas',parseInt(this.value)||4)"><span style="font-size:11px;color:var(--mu);">linhas em branco</span></div></div>`;
+  }
+  div.innerHTML=`
+  <div class="qtop"><span class="qnum">QUESTÃO ${numStr}</span><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:11px;color:var(--mu);"><input type="number" class="pts-in" value="${q.pts}" min="0.1" step="0.1" onchange="setF(${q.id},'pts',parseFloat(this.value)||1);updatePts()"> pts</span><div class="qctrl"><button class="qb mv" onclick="moveQ(${q.id},-1)">↑</button><button class="qb mv" onclick="moveQ(${q.id},1)">↓</button><button class="qb" onclick="dupQ(${q.id})">⧉ Dup</button><button class="qb del" onclick="delQ(${q.id})">✕ Remover</button></div></div></div>
+  <div class="qtipo"><span>Tipo:</span><button class="qtbtn ${q.tipo==='multipla'?'active':''}" onclick="setTipoQ(${q.id},'multipla')">Múltipla Escolha</button><button class="qtbtn ${q.tipo==='somatoria'?'active':''}" onclick="setTipoQ(${q.id},'somatoria')">Somatória</button><button class="qtbtn ${q.tipo==='discursiva'?'active':''}" onclick="setTipoQ(${q.id},'discursiva')">Discursiva</button></div>
+  <div class="qf"><label>① Texto Distrator (opcional)</label><textarea placeholder="Cole aqui o texto base…" oninput="setF(${q.id},'distrator',this.value)">${q.distrator||''}</textarea></div>
+  <div class="qf"><label>② Imagem (opcional)</label><div class="imgdrop" onclick="document.getElementById('qi-${q.id}').click()"><input type="file" id="qi-${q.id}" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer;" onchange="setImg(${q.id},this)">${imgHTML}</div></div>
+  <div class="qf"><label>③ Consigna / instrução (opcional)</label><input type="text" value="${esc(q.consigna||'')}" placeholder="Ex: Assinale a alternativa correta." oninput="setF(${q.id},'consigna',this.value)"></div>
+  <div class="qf"><label>④ Enunciado da Questão *</label><textarea rows="3" placeholder="Digite o enunciado completo da questão…" oninput="setF(${q.id},'enunciado',this.value)">${q.enunciado||''}</textarea></div>
+  ${tipoArea}`;
+  cont.appendChild(div);
+}
+
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function xmlEsc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
+function setF(id,f,v){ const q=questoes.find(q=>q.id===id); if(q) q[f]=v; }
+function setAlt(id,i,v){ const q=questoes.find(q=>q.id===id); if(q) q.alternativas[i].texto=v; }
+function setAltOk(id,i){ const q=questoes.find(q=>q.id===id); if(!q)return; q.alternativas.forEach((a,j)=>a.correta=j===i); }
+function setSomat(id,i,f,v){ const q=questoes.find(q=>q.id===id); if(!q)return; q.somatoria[i][f]=v; const soma=q.somatoria.filter(s=>s.ok).reduce((a,s)=>a+s.v,0); const hint=document.getElementById(`somat-hint-${id}`); if(hint) hint.innerHTML=`Gabarito: <strong>${soma||'—'}</strong>`; }
+function setImg(id,inp){ if(!inp.files[0])return; const r=new FileReader(); r.onload=e=>{ const q=questoes.find(q=>q.id===id); if(q){q.imagem=e.target.result;renderAll();}}; r.readAsDataURL(inp.files[0]); }
+function rmImg(id){ const q=questoes.find(q=>q.id===id); if(q){q.imagem=null;renderAll();} }
+function updatePts(){
+  const tot=questoes.reduce((a,q)=>a+(parseFloat(q.pts)||0),0);
+  document.getElementById('totalPts').textContent=tot.toFixed(1).replace('.',',');
+  document.getElementById('ptsWarn').style.display=Math.abs(tot-10)>0.01?'':'none';
+  document.getElementById('ptsSummary').textContent=`${questoes.length} questão(ões) · Total ${tot.toFixed(1)} pts`;
+}
+function resetAll(){ if(!confirm('Apagar tudo e recomeçar?'))return; questoes=[];qId=0; document.getElementById('qContainer').innerHTML=''; for(let i=0;i<10;i++) addQ(i<2?'discursiva':'multipla'); updatePts(); }
+function autoSave(){ try{sessionStorage.setItem('gp_e',document.getElementById('nomeEscola').value);}catch(e){} }
+function openPreview(){ document.getElementById('modalBd').innerHTML=buildHTML(questoes,null); document.getElementById('modalPreview').classList.remove('hidden'); }
+function closePreview(){ document.getElementById('modalPreview').classList.add('hidden'); }
+
+// ══════════════════════════════════════════════════════════════
+// BUILD HTML — recebe _questoes e _versaoLabel como parâmetros
+// Usado tanto para preview/export normal quanto para versões embaralhadas
+// ══════════════════════════════════════════════════════════════
+function buildHTML(_questoes, _versaoLabel){
+  const escola=document.getElementById('nomeEscola').value,cidade=document.getElementById('cidadeEscola').value;
+  const titulo=document.getElementById('tituloAval').value,prof=document.getElementById('selProf').value;
+  const disc=document.getElementById('selDisc').value,serie=document.getElementById('selSerie').value;
+  const turma=document.getElementById('selTurma').value,trim=document.getElementById('selTrim').value;
+  const instrucoes=document.getElementById('instrucoes').value;
+  const dataStr=document.getElementById('calBtn').textContent.trim();
+  const letras=tipoProva==='em'?[...LEM]:[...LEF];
+  const tituloFinal = _versaoLabel ? `${titulo} — VERSÃO ${_versaoLabel}` : titulo;
+
+  // ── GABARITO: usa _questoes (já embaralhado) ──
+  let gabHtml=`<table style="width:152px;border-collapse:collapse;border:1.5px solid #333;font-family:Arial,sans-serif;font-size:8.5pt;float:right;margin-left:8px;"><tr style="background:#e8e8e8;"><th style="border:1px solid #333;padding:3px 5px;text-align:center;">Nº</th><th style="border:1px solid #333;padding:3px 5px;text-align:center;" colspan="${letras.length+1}">Gabarito</th></tr>`;
+  _questoes.forEach((q,i)=>{
+    const correta=q.tipo==='multipla'?q.alternativas.find(a=>a.correta):null;
+    gabHtml+=`<tr style="background:${i%2===0?'#f9f9f9':'#fff'}"><td style="border:1px solid #333;padding:2px 5px;text-align:center;font-weight:bold;">${i+1}</td>`;
+    if(q.tipo==='discursiva') gabHtml+=`<td style="border:1px solid #333;padding:2px 4px;text-align:center;font-size:7.5pt;" colspan="${letras.length+1}">Discursiva</td>`;
+    else if(q.tipo==='somatoria'){const soma=q.somatoria.filter(s=>s.ok).reduce((a,s)=>a+s.v,0); gabHtml+=`<td style="border:1px solid #333;padding:2px 4px;text-align:center;font-size:7.5pt;" colspan="${letras.length+1}">= ${soma||'—'}</td>`;}
+    else{letras.forEach((l,idx)=>{const isOk=correta&&correta.letra===l; gabHtml+=`<td style="border:1px solid #333;padding:2px 4px;text-align:center;background:${idx%2===0?'#f5f5f5':'#fff'};${isOk?'font-weight:bold;':''}">${l}</td>`;});gabHtml+=`<td style="border:1px solid #333;padding:2px 3px;width:14px;background:#f0f0f0;"></td>`;}
+    gabHtml+=`</tr>`;
+  });
+  gabHtml+=`</table>`;
+
+  const logoHtml=logoB64?`<img src="${logoB64}" style="max-width:85px;max-height:65px;object-fit:contain;">`:`<div style="width:85px;height:65px;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:8px;color:#aaa;">Logo</div>`;
+  const wrap=`<div style="overflow:hidden;font-family:Arial,sans-serif;margin-bottom:14px;">${gabHtml}<table style="border-collapse:collapse;border:1.5px solid #333;font-family:Arial,sans-serif;font-size:9pt;width:calc(100% - 160px);"><tr><td rowspan="5" style="border:1px solid #333;width:95px;text-align:center;vertical-align:middle;padding:5px;">${logoHtml}</td><td colspan="3" style="border:1px solid #333;text-align:center;vertical-align:middle;padding:4px 6px;"><div style="font-size:12.5pt;font-weight:bold;">${escola}</div><div style="font-size:9.5pt;">${cidade}</div><div style="font-size:11.5pt;font-weight:bold;">${tituloFinal}</div></td><td rowspan="5" style="border:1px solid #333;width:20px;text-align:center;vertical-align:middle;font-size:9pt;font-weight:bold;writing-mode:vertical-rl;padding:4px;">N&nbsp;O&nbsp;T&nbsp;A</td><td rowspan="5" style="border:1px solid #333;width:72px;"></td></tr><tr><td colspan="2" style="border:1px solid #333;padding:3px 6px;font-size:8.5pt;">Professor(a): <u>${prof||'______________________________'}</u></td><td style="border:1px solid #333;padding:3px 6px;font-size:8.5pt;">Disciplina: <u>${disc||'_______________'}</u></td></tr><tr><td colspan="3" style="border:1px solid #333;padding:3px 6px;font-size:8.5pt;">Aluno(a): _____________________________ Série: <u>${serie}</u> Turma: <u>${turma||'___'}</u> Trimestre: <u>${trim}</u> Data: <u>${dataStr==='Selecionar data…'?'___/___/____':dataStr}</u></td></tr><tr><td colspan="3" style="border:1px solid #333;padding:3px 6px;font-size:8.5pt;">Assinatura do responsável: __________________________ Data: ___/___/___</td></tr><tr><td colspan="3" style="border:1px solid #333;padding:4px 6px;font-size:8.5pt;">${instrucoes}</td></tr></table></div>`;
+
+  // ── QUESTÕES: usa _questoes (já embaralhado) ──
+  let qsHtml='';
+  _questoes.forEach((q,i)=>{
+    const numStr=String(i+1).padStart(2,'0'),pts=q.pts.toFixed(1).replace('.',',');
+    qsHtml+=`<div style="margin-bottom:20px;font-family:Arial,sans-serif;font-size:11pt;page-break-inside:avoid;"><div style="font-weight:bold;font-size:11.5pt;margin-bottom:6px;">QUESTÃO ${numStr} <span style="font-size:10pt;font-weight:normal;">(${pts} pts)</span></div>`;
+    if(q.distrator&&q.distrator.trim()) qsHtml+=`<div style="border-left:3px solid #bbb;padding:5px 12px;margin-bottom:8px;font-style:italic;font-size:10.5pt;background:#fafafa;">${q.distrator.replace(/\n/g,'<br>')}</div>`;
+    if(q.imagem) qsHtml+=`<div style="margin-bottom:8px;text-align:center;"><img src="${q.imagem}" style="max-width:100%;max-height:200px;border:1px solid #ddd;"></div>`;
+    if(q.consigna&&q.consigna.trim()) qsHtml+=`<div style="font-style:italic;margin-bottom:5px;font-size:10.5pt;color:#333;">${q.consigna}</div>`;
+    qsHtml+=`<div style="margin-bottom:9px;text-align:justify;line-height:1.5;">${q.enunciado||'<em style="color:#999">[sem enunciado]</em>'}</div>`;
+    if(q.tipo==='multipla') q.alternativas.forEach(a=>{if(a.texto.trim()) qsHtml+=`<div style="margin:4px 0 4px 18px;line-height:1.5;">${a.letra}) ${a.texto}</div>`;});
+    else if(q.tipo==='somatoria'){qsHtml+=`<div style="font-size:10pt;color:#555;margin-bottom:6px;font-style:italic;">Some os valores das afirmativas VERDADEIRAS.</div>`; q.somatoria.forEach(s=>{if(s.txt.trim()) qsHtml+=`<div style="margin:4px 0 4px 18px;line-height:1.5;"><strong>(${String(s.v).padStart(2,'0')})</strong> ${s.txt}</div>`;});}
+    else{for(let l=0;l<(q.linhas||4);l++) qsHtml+=`<div style="border-bottom:1px solid #aaa;height:28px;margin-bottom:4px;"></div>`;}
+    qsHtml+=`<div style="border-bottom:1px dashed #ddd;margin-top:12px;"></div></div>`;
+  });
+  return wrap + qsHtml + `
+<div style="border-top:1px solid #ccc;margin-top:18px;padding:8px 0 4px;text-align:center;font-family:Arial,sans-serif;font-size:8pt;color:#888;letter-spacing:.03em;">
+  🤖 Plataforma de Geração de Provas com IA &nbsp;·&nbsp; Prof. Lafaiete Erkmann
+</div>`;
+}
+
+// ── EXPORT PDF ──
+async function exportPDF(){
+  const btn=document.getElementById('btnExport');
+  btn.disabled=true; btn.textContent='⏳ Gerando PDF…';
+  try{
+    const d=document.createElement('div');
+    d.style.cssText='position:absolute;left:-9999px;top:0;width:190mm;padding:10mm;background:white;';
+    d.innerHTML=buildHTML(questoes,null); document.body.appendChild(d);
+    await Promise.all(Array.from(d.querySelectorAll('img')).map(img=>img.complete?Promise.resolve():new Promise(r=>{img.onload=r;img.onerror=r;})));
+    const canvas=await html2canvas(d,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
+    document.body.removeChild(d);
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const iw=190,ph=277,ih=(canvas.height*iw)/canvas.width;
+    let hl=ih,pos=0;
+    pdf.addImage(canvas.toDataURL('image/png'),'PNG',10,10,iw,ih);
+    hl-=ph;
+    while(hl>0){pos=hl-ih;pdf.addPage();pdf.addImage(canvas.toDataURL('image/png'),'PNG',10,pos,iw,ih);hl-=ph;}
+    pdf.save(`${(document.getElementById('nomeEscola').value||'prova').replace(/\s+/g,'_')}.pdf`);
+  }catch(err){alert('Erro ao gerar PDF:\n'+err.message);}
+  finally{btn.disabled=false;btn.textContent='📄 Exportar PDF';}
+}
+
+// ══════════════════════════════════════════════════════════════
+// EXPORT DOCX — usa JSZip + XML manual
+// _questoes: array de questões já na ordem/alternativas corretas para esta versão
+// _versaoLabel: 'A', 'B', etc., ou null para exportação normal
+// ══════════════════════════════════════════════════════════════
+async function exportDOCX(){
+  const btn=document.getElementById('btnDocx');
+  btn.disabled=true; btn.textContent='⏳ Gerando DOCX…';
+  try{
+    await buildAndDownloadDocx(questoes, null);
+  }catch(err){
+    console.error('Erro ao gerar DOCX:',err);
+    alert('Erro ao gerar DOCX:\n'+err.message);
+  }finally{
+    btn.disabled=false; btn.textContent='📝 Exportar DOCX';
+  }
+}
+
+async function exportDocxFromQuestoes(qs, versaoLabel){
+  await buildAndDownloadDocx(qs, versaoLabel);
+}
+
+async function buildAndDownloadDocx(_questoes, _versaoLabel){
+    if(typeof JSZip==='undefined') throw new Error('JSZip não carregado. Verifique sua conexão.');
+
+    const escola=document.getElementById('nomeEscola').value||'';
+    const cidade=document.getElementById('cidadeEscola').value||'';
+    const titulo=document.getElementById('tituloAval').value||'AVALIAÇÃO';
+    const prof=document.getElementById('selProf').value||'';
+    const disc=document.getElementById('selDisc').value||'';
+    const serie=document.getElementById('selSerie').value||'';
+    const turma=document.getElementById('selTurma').value||'';
+    const trimVal=document.getElementById('selTrim').value||'';
+    const instrText=document.getElementById('instrucoes').value||'';
+    const dataStr=document.getElementById('calBtn').textContent.trim();
+    const dataFmt=dataStr==='Selecionar data…'?'___/___/____':dataStr;
+    // letras de acordo com o tipo de prova
+    const letras=tipoProva==='em'?['A','B','C','D','E']:['A','B','C','D'];
+
+    // Helpers XML
+    const x=xmlEsc;
+
+    // Parágrafo simples
+    function wPara(text,opts){
+      opts=opts||{};
+      const sz=opts.sz||22, bold=opts.bold?'<w:b/>':'', it=opts.it?'<w:i/>':'';
+      const color=opts.color?`<w:color w:val="${opts.color}"/>`:'';
+      const spB=opts.spB||0, spA=opts.spA||0;
+      const ind=opts.ind?`<w:ind w:left="${opts.ind}"/>`:'';
+      const jc=opts.center?'<w:jc w:val="center"/>':(opts.justify?'<w:jc w:val="both"/>':'');
+      const border=opts.borderBottom?`<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="999999"/></w:pBdr>`:'';
+      const lines=String(text||'').split('\n');
+      return lines.map((line,li)=>`
+        <w:p>
+          <w:pPr>${jc}<w:spacing w:before="${li===0?spB:0}" w:after="${li===lines.length-1?spA:0}"/>${ind}${border}</w:pPr>
+          <w:r><w:rPr>${bold}${it}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/>${color}</w:rPr><w:t xml:space="preserve">${x(line)}</w:t></w:r>
+        </w:p>`).join('');
+    }
+
+    // Parágrafo com múltiplos runs
+    function wParaRuns(runs,opts){
+      opts=opts||{};
+      const spB=opts.spB||0,spA=opts.spA||0;
+      const ind=opts.ind?`<w:ind w:left="${opts.ind}"/>`:'';
+      const jc=opts.center?'<w:jc w:val="center"/>':(opts.justify?'<w:jc w:val="both"/>':'');
+      const border=opts.borderBottom?`<w:pBdr><w:bottom w:val="single" w:sz="2" w:space="1" w:color="E0E0E0"/></w:pBdr>`:'';
+      const runsXml=runs.map(r=>{
+        const sz=r.sz||22,bold=r.bold?'<w:b/>':'',it=r.it?'<w:i/>':'';
+        const color=r.color?`<w:color w:val="${r.color}"/>`:'';
+        return `<w:r><w:rPr>${bold}${it}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/>${color}</w:rPr><w:t xml:space="preserve">${x(r.t||'')}</w:t></w:r>`;
+      }).join('');
+      return `<w:p><w:pPr>${jc}<w:spacing w:before="${spB}" w:after="${spA}"/>${ind}${border}</w:pPr>${runsXml}</w:p>`;
+    }
+
+    // ══════════════════════════════════════════════════
+    // LARGURAS FIXAS
+    // ══════════════════════════════════════════════════
+    const gabW  = 2268;
+    const colNW = Math.round(gabW * 0.22);
+    const colLW = Math.floor((gabW - colNW) / (letras.length + 1));
+
+    const cabW  = 7938;
+    const cLogo   = 1418;
+    const cNlbl   = 320;
+    const cNbox   = 900;
+    const cCentro = cabW - cLogo - cNlbl - cNbox;
+
+    const BDR_ON  = `<w:tcBorders><w:top w:val="single" w:sz="4" w:color="333333"/><w:left w:val="single" w:sz="4" w:color="333333"/><w:bottom w:val="single" w:sz="4" w:color="333333"/><w:right w:val="single" w:sz="4" w:color="333333"/></w:tcBorders>`;
+    const BDR_OFF = `<w:tcBorders><w:top w:val="none" w:sz="0" w:color="auto"/><w:left w:val="none" w:sz="0" w:color="auto"/><w:bottom w:val="none" w:sz="0" w:color="auto"/><w:right w:val="none" w:sz="0" w:color="auto"/></w:tcBorders>`;
+    const MAR     = `<w:tcMar><w:top w:w="50" w:type="dxa"/><w:left w:w="80" w:type="dxa"/><w:bottom w:w="50" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tcMar>`;
+    const MAR_SML = `<w:tcMar><w:top w:w="30" w:type="dxa"/><w:left w:w="60" w:type="dxa"/><w:bottom w:w="30" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tcMar>`;
+
+    function tc(w, content, opts){
+      opts = opts||{};
+      const ww   = `<w:tcW w:w="${w}" w:type="dxa"/>`;
+      const span = opts.span ? `<w:gridSpan w:val="${opts.span}"/>` : '';
+      const vm   = opts.vmStart ? `<w:vMerge w:val="restart"/>` : (opts.vmCont ? `<w:vMerge/>` : '');
+      const va   = `<w:vAlign w:val="${opts.va||'center'}"/>`;
+      const bdr  = opts.noBdr ? BDR_OFF : BDR_ON;
+      const mar  = opts.sml ? MAR_SML : MAR;
+      const inner = Array.isArray(content) ? content.join('') : (content||wPara(''));
+      return `<w:tc><w:tcPr>${ww}${span}${vm}${va}${bdr}${mar}</w:tcPr>${inner}</w:tc>`;
+    }
+
+    function notaVert(){
+      return ['N','O','T','A'].map((c,i)=>
+        `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="${i<3?40:0}"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr><w:t>${c}</w:t></w:r></w:p>`
+      ).join('');
+    }
+
+    async function logoDrawingXml(){
+      if(!logoB64) return wPara('[ LOGO ]',{sz:16,center:true,color:'AAAAAA'});
+      const maxWemu = (cLogo - 120) * 635;
+      const maxHemu = 1800 * 635;
+      return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          const ratio = img.naturalWidth / img.naturalHeight;
+          let emuW = maxWemu;
+          let emuH = Math.round(emuW / ratio);
+          if(emuH > maxHemu){ emuH = maxHemu; emuW = Math.round(emuH * ratio); }
+          const xml = `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:rPr><w:noProof/></w:rPr><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="${emuW}" cy="${emuH}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="1" name="Logo"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="1" name="Logo"/><pic:cNvPicPr><a:picLocks noChangeAspect="1"/></pic:cNvPicPr></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdLogo" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${emuW}" cy="${emuH}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+          resolve(xml);
+        };
+        img.onerror = () => resolve(wPara('[ LOGO ]',{sz:16,center:true,color:'AAAAAA'}));
+        img.src = logoB64;
+      });
+    }
+    const logoXml = await logoDrawingXml();
+
+    const tblGrid4 = `<w:tblGrid>
+      <w:gridCol w:w="${cLogo}"/>
+      <w:gridCol w:w="${cCentro}"/>
+      <w:gridCol w:w="${cNlbl}"/>
+      <w:gridCol w:w="${cNbox}"/>
+    </w:tblGrid>`;
+
+    const tblBdr = `<w:tblBorders>
+      <w:top    w:val="single" w:sz="6" w:color="333333"/>
+      <w:left   w:val="single" w:sz="6" w:color="333333"/>
+      <w:bottom w:val="single" w:sz="6" w:color="333333"/>
+      <w:right  w:val="single" w:sz="6" w:color="333333"/>
+      <w:insideH w:val="single" w:sz="4" w:color="333333"/>
+      <w:insideV w:val="single" w:sz="4" w:color="333333"/>
+    </w:tblBorders>`;
+
+    // Título com versão se aplicável
+    const tituloDocx = _versaoLabel ? `${titulo} — VERSÃO ${_versaoLabel}` : titulo;
+
+    const cab_r1 =
+      tc(cLogo,  logoXml, {vmStart:true, va:'center', sml:true}) +
+      tc(cCentro,[
+        wPara(escola, {bold:true, sz:32, center:true, spA:20}),
+        wPara(cidade, {sz:18, center:true, spA:20}),
+        wPara(tituloDocx, {bold:true, sz:26, center:true}),
+      ], {va:'center', sml:true}) +
+      tc(cNlbl,  notaVert(), {vmStart:true, va:'center', sml:true}) +
+      tc(cNbox,  wPara(''), {vmStart:true, va:'center', sml:true});
+
+    const cab_r2 =
+      tc(cLogo,  wPara(''), {vmCont:true, sml:true}) +
+      tc(cCentro,[
+        wParaRuns([{t:'Professor(a): ',bold:true,sz:18},{t:prof||'_______________________',sz:18}],{spB:20}),
+        wParaRuns([{t:'Disciplina: ',bold:true,sz:18},{t:disc||'___________________',sz:18}]),
+      ], {va:'center', sml:true}) +
+      tc(cNlbl,  wPara(''), {vmCont:true, sml:true}) +
+      tc(cNbox,  wPara(''), {vmCont:true, sml:true});
+
+    const cab_r3 =
+      tc(cabW,
+        wParaRuns([
+          {t:'Aluno(a): ',bold:true,sz:18},{t:'__________________________________  ',sz:18},
+          {t:'Série: ',bold:true,sz:18},{t:serie+'  ',sz:18},
+          {t:'Turma: ',bold:true,sz:18},{t:(turma||'___')+'  ',sz:18},
+          {t:'Trim.: ',bold:true,sz:18},{t:trimVal+'  ',sz:18},
+          {t:'Data: ',bold:true,sz:18},{t:dataFmt,sz:18},
+        ]),
+      {span:4, va:'center', sml:true});
+
+    const cab_r4 =
+      tc(cabW,
+        wParaRuns([
+          {t:'Assinatura do responsável: ',bold:true,sz:18},
+          {t:'_______________________   ',sz:18},
+          {t:'Data: ',bold:true,sz:18},{t:'___/___/___',sz:18},
+        ]),
+      {span:4, va:'center', sml:true});
+
+    const cab_r5 =
+      tc(cabW, wPara(instrText,{sz:17,it:true}), {span:4, va:'top', sml:true});
+
+    const cabTable = `<w:tbl>
+      <w:tblPr>
+        <w:tblW w:w="${cabW}" w:type="dxa"/>
+        ${tblBdr}
+        <w:tblLayout w:type="fixed"/>
+      </w:tblPr>
+      ${tblGrid4}
+      <w:tr><w:trPr><w:trHeight w:val="800" w:hRule="atLeast"/></w:trPr>${cab_r1}</w:tr>
+      <w:tr>${cab_r2}</w:tr>
+      <w:tr>${cab_r3}</w:tr>
+      <w:tr>${cab_r4}</w:tr>
+      <w:tr>${cab_r5}</w:tr>
+    </w:tbl>`;
+
+    // ══════════════════════════════════════════════════
+    // TABELA GABARITO — usa _questoes (já embaralhado)
+    // ══════════════════════════════════════════════════
+    const gabBdr = `<w:tblBorders>
+      <w:top    w:val="single" w:sz="6" w:color="333333"/>
+      <w:left   w:val="single" w:sz="6" w:color="333333"/>
+      <w:bottom w:val="single" w:sz="6" w:color="333333"/>
+      <w:right  w:val="single" w:sz="6" w:color="333333"/>
+      <w:insideH w:val="single" w:sz="4" w:color="333333"/>
+      <w:insideV w:val="single" w:sz="4" w:color="333333"/>
+    </w:tblBorders>`;
+    const gabGrid = `<w:tblGrid>${[colNW,...letras.map(()=>colLW),colLW].map(cw=>`<w:gridCol w:w="${cw}"/>`).join('')}</w:tblGrid>`;
+
+    // Header do gabarito
+    let gabHdrCells = tc(colNW, wPara('Nº',{bold:true,sz:16,center:true}), {shade:'E8E8E8',sml:true});
+    letras.forEach(l=>{ gabHdrCells += tc(colLW, wPara(l,{bold:true,sz:16,center:true}), {sml:true}); });
+    gabHdrCells += tc(colLW, wPara('✓',{bold:true,sz:14,center:true}), {sml:true});
+    let gabRows = `<w:tr>${gabHdrCells}</w:tr>`;
+
+    // ── PONTO CRÍTICO: itera sobre _questoes, não sobre a global questoes ──
+    _questoes.forEach((q,i)=>{
+      const shade = i%2===0 ? 'F5F5F5' : 'FFFFFF';
+      // Busca a alternativa correta na posição atual (após embaralhamento)
+      const correta = q.tipo==='multipla' ? q.alternativas.find(a=>a.correta) : null;
+      let row = tc(colNW, wPara(String(i+1),{bold:true,sz:16,center:true}), {sml:true});
+      if(q.tipo==='discursiva'){
+        row += tc(colLW*(letras.length+1), wPara('Discursiva',{sz:13,it:true,center:true}), {span:letras.length+1,sml:true});
+      } else if(q.tipo==='somatoria'){
+        const soma=q.somatoria.filter(s=>s.ok).reduce((a,s)=>a+s.v,0);
+        row += tc(colLW*(letras.length+1), wPara('= '+(soma||'—'),{bold:true,sz:14,center:true}), {span:letras.length+1,sml:true});
+      } else {
+        // Para múltipla escolha: destaca a letra correta na POSIÇÃO atual das alternativas
+        letras.forEach(l=>{
+          const isOk = correta && correta.letra===l;
+          row += tc(colLW, wPara(l,{bold:isOk,sz:16,center:true,color:isOk?'166534':undefined}), {sml:true});
+        });
+        row += tc(colLW, wPara(''), {sml:true});
+      }
+      gabRows += `<w:tr>${row}</w:tr>`;
+    });
+
+    const gabTable = `<w:tbl>
+      <w:tblPr>
+        <w:tblW w:w="${gabW}" w:type="dxa"/>
+        ${gabBdr}
+        <w:tblLayout w:type="fixed"/>
+      </w:tblPr>
+      ${gabGrid}
+      ${gabRows}
+    </w:tbl>`;
+
+    const cabPos = 0;
+    const gabPos = 7938 + 284;
+
+    const cabTablePos = cabTable.replace(
+      '<w:tblPr>',
+      `<w:tblPr><w:tblpPr w:leftFromText="0" w:rightFromText="0" w:vertAnchor="margin" w:horzAnchor="margin" w:tblpX="${cabPos}" w:tblpY="0"/>`
+    );
+
+    const gabTablePos = gabTable.replace(
+      '<w:tblPr>',
+      `<w:tblPr><w:tblpPr w:leftFromText="0" w:rightFromText="0" w:vertAnchor="margin" w:horzAnchor="margin" w:tblpX="${gabPos}" w:tblpY="0"/>`
+    );
+
+    const wrapTable = cabTablePos + '<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>' + gabTablePos;
+
+    // ── QUESTÕES — resolve imagens em paralelo, usando _questoes ──
+    const _qImgXmls = await Promise.all(_questoes.map((q,idx) =>
+      q.imagem ? imgDrawingXml(q.imagem, 9000, idx+10) : Promise.resolve('')
+    ));
+    const _qImgData = _questoes.map((q,idx) => {
+      if(!q.imagem) return null;
+      const ext = (q.imagem.match(/^data:image\/([^;]+);/)?.[1]||'png').replace('jpeg','jpg');
+      return { b64: q.imagem.split(',')[1], ext, rId: 'rIdImg'+(idx+10) };
+    });
+
+    let qsXml='<w:p><w:pPr><w:spacing w:before="200" w:after="0"/></w:pPr></w:p>';
+    for(let _qi=0;_qi<_questoes.length;_qi++){
+      const q=_questoes[_qi];
+      const i=_qi;
+      const numStr=String(i+1).padStart(2,'0');
+      const pts=q.pts.toFixed(1).replace('.',',');
+
+      qsXml+=wParaRuns([{t:'QUESTÃO '+numStr+' ',bold:true,sz:24},{t:'('+pts+' pts)',sz:18,color:'555555'}],{spB:160,spA:60});
+
+      if(q.distrator&&q.distrator.trim()){
+        q.distrator.split('\n').forEach(line=>{ qsXml+=wPara(line,{sz:19,it:true,color:'444444',ind:360,spB:40}); });
+        qsXml+=wPara('',{spB:40});
+      }
+      if(q.consigna&&q.consigna.trim()) qsXml+=wPara(q.consigna,{sz:19,it:true,color:'333333',spB:40,spA:40});
+      qsXml+=wPara(q.enunciado||'[sem enunciado]',{sz:21,justify:true,spB:40,spA:60});
+
+      if(_qImgXmls[i]) qsXml += _qImgXmls[i];
+
+      if(q.tipo==='multipla'){
+        // Alternativas já na ordem embaralhada correta
+        q.alternativas.forEach(a=>{ if(a.texto.trim()) qsXml+=wParaRuns([{t:a.letra+') ',bold:true,sz:20},{t:a.texto,sz:20}],{ind:360,spB:30}); });
+      } else if(q.tipo==='somatoria'){
+        qsXml+=wPara('Some os valores das afirmativas VERDADEIRAS.',{sz:17,it:true,color:'555555',spB:30,spA:30});
+        q.somatoria.forEach(s=>{ if(s.txt.trim()) qsXml+=wParaRuns([{t:'('+String(s.v).padStart(2,'0')+') ',bold:true,sz:20,color:'92400e'},{t:s.txt,sz:20}],{ind:360,spB:30}); });
+      } else {
+        for(let l=0;l<(q.linhas||4);l++) qsXml+=wPara('',{spB:40,borderBottom:true});
+      }
+      qsXml+=wParaRuns([],{spB:80,borderBottom:true});
+    }
+
+    // ── DOCUMENT.XML ──
+    const documentXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
+  xmlns:cx="http://schemas.microsoft.com/office/drawing/2014/chartex"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:aink="http://schemas.microsoft.com/office/drawing/2016/ink"
+  xmlns:am3d="http://schemas.microsoft.com/office/drawing/2017/model3d"
+  xmlns:o="urn:schemas-microsoft-com:office:office"
+  xmlns:oel="http://schemas.microsoft.com/office/2019/extlst"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+  xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"
+  xmlns:v="urn:schemas-microsoft-com:vml"
+  xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing"
+  xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+  xmlns:w10="urn:schemas-microsoft-com:office:word"
+  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"
+  xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml"
+  xmlns:w16cex="http://schemas.microsoft.com/office/word/2018/wordml/cex"
+  xmlns:w16cid="http://schemas.microsoft.com/office/word/2016/wordml/cid"
+  xmlns:w16="http://schemas.microsoft.com/office/word/2018/wordml"
+  xmlns:w16sdtdh="http://schemas.microsoft.com/office/word/2020/wordml/sdtdatahash"
+  xmlns:w16se="http://schemas.microsoft.com/office/word/2015/wordml/symex"
+  xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup"
+  xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk"
+  xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml"
+  xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"
+  mc:Ignorable="w14 w15 w16se w16cid w16 w16cex w16sdtdh wp14">
+  <w:body>
+    ${wrapTable}
+    ${qsXml}
+    <w:p>
+      <w:pPr>
+        <w:pBdr><w:top w:val="single" w:sz="4" w:space="4" w:color="BBBBBB"/></w:pBdr>
+        <w:spacing w:before="240" w:after="60"/>
+        <w:jc w:val="center"/>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:color w:val="999999"/>
+          <w:sz w:val="14"/><w:szCs w:val="14"/>
+        </w:rPr>
+        <w:t>🤖 Plataforma de Geração de Provas com IA  ·  Prof. Lafaiete Erkmann</w:t>
+      </w:r>
+    </w:p>
+    <w:sectPr>
+      <w:pgSz w:w="11906" w:h="16838"/>
+      <w:pgMar w:top="567" w:right="567" w:bottom="567" w:left="567" w:header="0" w:footer="0" w:gutter="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+
+    const contentTypes=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+  <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
+  <Default Extension="png" ContentType="image/png"/>
+  <Default Extension="jpg" ContentType="image/jpeg"/>
+  <Default Extension="jpeg" ContentType="image/jpeg"/>
+  <Default Extension="gif" ContentType="image/gif"/>
+  <Default Extension="webp" ContentType="image/webp"/>
+</Types>`;
+
+    const rels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+    let logoExt = 'png';
+    if(logoB64){ logoExt = (logoB64.match(/^data:image\/([^;]+);/)?.[1]||'png').replace('jpeg','jpg'); }
+    const wordRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>
+${logoB64 ? '<Relationship Id="rIdLogo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.' + logoExt + '"/>' : ''}
+${_qImgData.filter(Boolean).map(d => `<Relationship Id="${d.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${d.rId}.${d.ext}"/>`).join('\n')}
+</Relationships>`;
+
+    const stylesXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+          xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:docDefaults>
+    <w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:rPrDefault>
+    <w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault>
+  </w:docDefaults>
+  <w:style w:type="paragraph" w:styleId="Normal" w:default="1">
+    <w:name w:val="Normal"/>
+    <w:pPr><w:spacing w:after="0"/></w:pPr>
+    <w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr>
+  </w:style>
+</w:styles>`;
+
+    const settingsXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:defaultTabStop w:val="708"/>
+  <w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat>
+</w:settings>`;
+
+    const zip=new JSZip();
+    zip.file('[Content_Types].xml', contentTypes);
+    zip.file('_rels/.rels', rels);
+    zip.file('word/document.xml', documentXml);
+    zip.file('word/_rels/document.xml.rels', wordRels);
+    zip.file('word/styles.xml', stylesXml);
+    zip.file('word/settings.xml', settingsXml);
+    if(logoB64){
+      const logoMime = logoB64.match(/^data:([^;]+);/)?.[1]||'image/png';
+      logoExt = logoMime.includes('jpeg')||logoMime.includes('jpg') ? 'jpg' : logoMime.includes('gif') ? 'gif' : logoMime.includes('webp') ? 'webp' : 'png';
+      const logoPure = logoB64.split(',')[1];
+      zip.file('word/media/logo.'+logoExt, logoPure, {base64:true});
+    }
+    _qImgData.forEach(d => {
+      if(d) zip.file(`word/media/${d.rId}.${d.ext}`, d.b64, {base64:true});
+    });
+
+    const blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',compression:'DEFLATE',compressionOptions:{level:6}});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const nomearq = (escola.replace(/\s+/g,'_')||'prova') + (_versaoLabel ? '_versao'+_versaoLabel : '');
+    a.href=url; a.download=`${nomearq}.docx`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// ══════════════════════════════════════════════════════════════
+// EMBARALHAR PROVA — ANTI-COLA
+// ══════════════════════════════════════════════════════════════
+let numVersoes = 2;
+
+function openShuffleModal(){ document.getElementById('modalShuffle').classList.remove('hidden'); }
+function closeShuffleModal(){ document.getElementById('modalShuffle').classList.add('hidden'); }
+
+function setVersoes(n, btn){
+  numVersoes = n;
+  document.querySelectorAll('.ver-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function shuffleArray(arr){
+  const a = [...arr];
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ── Gera array de questões embaralhadas para uma versão ──
+// Retorna deep clone com questões e/ou alternativas na nova ordem,
+// garantindo que q.alternativas[i].correta aponta para a letra certa
+// após o embaralhamento.
+function buildShuffledQuestoes(){
+  const doShuffleQ = document.getElementById('shuffleQuestoes').checked;
+  const doShuffleA = document.getElementById('shuffleAlternativas').checked;
+  const letras = tipoProva === 'em' ? [...LEM] : [...LEF];
+
+  // Deep clone
+  let qs = JSON.parse(JSON.stringify(questoes));
+
+  // Embaralha ordem das questões
+  if(doShuffleQ) qs = shuffleArray(qs);
+
+  // Embaralha alternativas mantendo a marcação de gabarito correta
+  if(doShuffleA){
+    qs = qs.map(q => {
+      if(q.tipo !== 'multipla') return q;
+      // Embaralha apenas os conteúdos (texto + flag correta), mantém letras A/B/C/D na ordem
+      const conteudos = shuffleArray(q.alternativas.map(a => ({texto: a.texto, correta: a.correta})));
+      q.alternativas = letras.map((l, i) => ({
+        letra: l,
+        texto: conteudos[i].texto,
+        correta: conteudos[i].correta  // a letra que recebeu o conteúdo correto vira o novo gabarito
+      }));
+      return q;
+    });
+  }
+
+  return qs;
+}
+
+function gerarVersoesEmbaralhadas(){
+  const doShuffleQ = document.getElementById('shuffleQuestoes').checked;
+  const doShuffleA = document.getElementById('shuffleAlternativas').checked;
+  if(!doShuffleQ && !doShuffleA){ alert('Selecione ao menos uma opção de embaralhamento.'); return; }
+  const enunciadosVazios = questoes.filter(q => !q.enunciado || !q.enunciado.trim());
+  if(enunciadosVazios.length > 0){
+    if(!confirm(`⚠ ${enunciadosVazios.length} questão(ões) sem enunciado. Deseja continuar mesmo assim?`)) return;
+  }
+  closeShuffleModal();
+
+  const VERSAO_LABELS = ['A','B','C','D'];
+  for(let v = 0; v < numVersoes; v++){
+    const label = VERSAO_LABELS[v] || String(v+1);
+    const qs = buildShuffledQuestoes();
+    // buildHTML agora recebe _questoes e _versaoLabel — gabarito e questões ficam sincronizados
+    const html = buildHTMLCompleto(qs, label);
+    const blob = new Blob([html], {type: 'text/html'});
+    const url  = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+}
+
+// ── Gera HTML completo (com doctype, head, print) para versões embaralhadas ──
+function buildHTMLCompleto(qs, versaoLabel){
+  const gabRodape = buildGabaritoRodape(qs, versaoLabel);
+  const corpo = buildHTML(qs, versaoLabel);
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+    <title>Prova — Versão ${versaoLabel}</title>
+    <style>
+      body{font-family:Arial,sans-serif;margin:0;padding:10mm 15mm;background:#fff;}
+      @media print{.no-print{display:none}body{padding:0;margin:0}}
+      .gab-rodape{margin-top:30px;padding:12px 16px;border:2px solid #333;border-radius:6px;background:#f9f9f9;page-break-inside:avoid;}
+      .gab-rodape h3{font-size:11pt;margin:0 0 8px 0;font-family:Arial,sans-serif;}
+      .gab-table{border-collapse:collapse;font-family:Arial,sans-serif;font-size:9pt;}
+      .gab-table td,.gab-table th{border:1px solid #333;padding:3px 7px;text-align:center;}
+      .gab-table th{background:#e8e8e8;font-weight:bold;}
+      .gab-table .ok{background:#dcfce7;font-weight:bold;color:#166534;}
+    </style>
+    </head><body>
+    ${corpo}
+    ${gabRodape}
+    <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`;
+}
+
+function buildGabaritoRodape(qs, versaoLabel){
+  const letras = tipoProva === 'em' ? [...LEM] : [...LEF];
+  let rows = '';
+  qs.forEach((q, i) => {
+    // Para múltipla escolha: busca qual letra ficou com correta=true após embaralhamento
+    const correta = q.tipo === 'multipla' ? q.alternativas.find(a => a.correta) : null;
+    let resposta = '—';
+    if(q.tipo === 'discursiva') resposta = 'Discursiva';
+    else if(q.tipo === 'somatoria') resposta = '= ' + (q.somatoria.filter(s=>s.ok).reduce((a,s)=>a+s.v,0)||'—');
+    else if(correta) resposta = correta.letra;
+    rows += `<tr><td>${i+1}</td><td>${resposta}</td></tr>`;
+  });
+  return `<div class="gab-rodape no-print">
+    <h3>🗝 Gabarito — Versão ${versaoLabel} (uso exclusivo do professor)</h3>
+    <table class="gab-table"><tr><th>Questão</th><th>Resposta</th></tr>${rows}</table>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// SALVAR / CARREGAR AVALIAÇÃO
+// ══════════════════════════════════════════════════════════════
+function salvarAvaliacao(){
+  const estado = {
+    versao: 2,
+    escola:    document.getElementById('nomeEscola').value,
+    cidade:    document.getElementById('cidadeEscola').value,
+    titulo:    document.getElementById('tituloAval').value,
+    prof:      document.getElementById('selProf').value,
+    disc:      document.getElementById('selDisc').value,
+    serie:     document.getElementById('selSerie').value,
+    turma:     document.getElementById('selTurma').value,
+    trim:      document.getElementById('selTrim').value,
+    instrucoes:document.getElementById('instrucoes').value,
+    ptsDefault:document.getElementById('ptsDefault').value,
+    tipoProva,
+    selectedDate,
+    professors,
+    disciplinas,
+    qId,
+    questoes,
+    logoB64
+  };
+  const json = JSON.stringify(estado);
+  const blob = new Blob([json], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const nome = (document.getElementById('tituloAval').value||'avaliacao').replace(/\s+/g,'_').replace(/[^\w\-]/g,'');
+  a.href = url; a.download = nome+'.gprova';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function carregarAvaliacao(inp){
+  if(!inp.files[0]) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try{
+      const st = JSON.parse(e.target.result);
+      professors = st.professors||[];
+      disciplinas = st.disciplinas||[];
+      renderProfList(); renderProfSelect();
+      renderDiscList(); renderDiscSelect();
+      document.getElementById('nomeEscola').value  = st.escola||'';
+      document.getElementById('cidadeEscola').value= st.cidade||'';
+      document.getElementById('tituloAval').value  = st.titulo||'';
+      document.getElementById('selTurma').value    = st.turma||'';
+      document.getElementById('instrucoes').value  = st.instrucoes||'';
+      if(st.ptsDefault) document.getElementById('ptsDefault').value = st.ptsDefault;
+      setTimeout(()=>{
+        if(st.prof)  document.getElementById('selProf').value  = st.prof;
+        if(st.disc)  document.getElementById('selDisc').value  = st.disc;
+        if(st.serie) document.getElementById('selSerie').value = st.serie;
+        if(st.trim)  document.getElementById('selTrim').value  = st.trim;
+      },50);
+      if(st.selectedDate){
+        selectedDate = new Date(st.selectedDate);
+        calYear = selectedDate.getFullYear(); calMonth = selectedDate.getMonth();
+        renderCal();
+        const d = selectedDate;
+        document.getElementById('calBtn').textContent =
+          d.getDate().toString().padStart(2,'0')+'/'+(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getFullYear();
+      }
+      tipoProva = st.tipoProva||'efaf';
+      document.querySelectorAll('.tipo-tg button').forEach(b=>{
+        b.classList.toggle('active', b.dataset.tipo===tipoProva);
+      });
+      qId = st.qId||0;
+      questoes = st.questoes||[];
+      renderAll(); updatePts();
+      logoB64 = st.logoB64||null;
+      const img = document.getElementById('logoImg');
+      if(logoB64){ img.src=logoB64; img.style.display='block'; document.getElementById('logoHint').style.display='none'; }
+      else { img.style.display='none'; document.getElementById('logoHint').style.display=''; }
+      alert('✅ Avaliação carregada com sucesso!');
+    }catch(err){
+      alert('❌ Arquivo inválido ou corrompido.\n'+err.message);
+    }
+  };
+  r.readAsText(inp.files[0]);
+  inp.value='';
+}
+
+// ══════════════════════════════════════════════════════════════
+// IA GROQ — GERAÇÃO DE QUESTÕES COM BNCC
+// ══════════════════════════════════════════════════════════════
+let iaNivel = 'fundamental';
+let iaTipoQ = 'multipla';
+let iaDificuldade = 'média';
+let iaFormato = 'escola';
+let bnccDescCache = null;
+let bnccTabAtual = 'codigo';
+
+// Descrições dos formatos
+const FORMATO_DESC = {
+  escola: '📝 Questão didática padrão, linguagem acessível e adequada à faixa etária.',
+  ufsc:   '🎓 Estilo UFSC: linguagem objetiva e rigorosa, enunciados precisos. Somatória usa (01)(02)(04)(08)(16)(32)(64).',
+  udesc:  '🎓 Estilo UDESC: 5 alternativas (A–E), linguagem técnico-científica, contexto regional quando pertinente.',
+  enem:   '🗒️ Estilo ENEM: contextualização com situações do cotidiano, texto motivador/distrator, interdisciplinaridade.',
+};
+
+function setFormatoIA(fmt, btn){
+  iaFormato = fmt;
+  document.querySelectorAll('#fmtEscola,#fmtUFSC,#fmtUDESC,#fmtENEM').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('fmtDesc').textContent = FORMATO_DESC[fmt]||'';
+  // ENEM e UDESC sugerem somatória? Não — apenas mostram descrição
+}
+
+const BNCC_EXEMPLOS = {
+  fundamental: ['EF06CI01','EF07CI01','EF08CI10','EF09CI14','EF06MA01','EF07MA01','EF06HI01','EF07LP01'],
+  medio:       ['EM13CNT101','EM13MAT101','EM13LGG101','EM13CHS101','EM13CNT301','EM13MAT303']
+};
+
+// Disciplinas disponíveis por nível
+const BNCC_DISCIPLINAS = {
+  fundamental: [
+    {v:'lingua_portuguesa', l:'Língua Portuguesa'},
+    {v:'matematica',        l:'Matemática'},
+    {v:'ciencias',          l:'Ciências'},
+    {v:'historia',          l:'História'},
+    {v:'geografia',         l:'Geografia'},
+    {v:'arte',              l:'Arte'},
+    {v:'educacao_fisica',   l:'Educação Física'},
+    {v:'lingua_inglesa',    l:'Língua Inglesa'},
+    {v:'ensino_religioso',  l:'Ensino Religioso'},
+    {v:'computacao',        l:'Computação'},
+  ],
+  medio: [
+    {v:'lingua_portuguesa_medio', l:'Língua Portuguesa'},
+    {v:'linguagens',              l:'Linguagens e suas Tecnologias'},
+    {v:'matematica_medio',        l:'Matemática e suas Tecnologias'},
+    {v:'ciencias_natureza',       l:'Ciências da Natureza e suas Tecnologias'},
+    {v:'ciencias_humanas',        l:'Ciências Humanas e Sociais Aplicadas'},
+    {v:'computacao_medio',        l:'Computação'},
+  ],
+  infantil: [
+    {v:'corpo',    l:'Corpo, Gestos e Movimento'},
+    {v:'escuta',   l:'Escuta, Fala, Pensamento e Imaginação'},
+    {v:'espacos',  l:'Espaços, Tempos, Quantidades, Relações e Transformações'},
+    {v:'tracos',   l:'Traços, Sons, Cores e Formas'},
+  ]
+};
+
+// Anos disponíveis por nível
+const BNCC_ANOS = {
+  fundamental: [
+    {v:'primeiro',l:'1º Ano'},{v:'segundo',l:'2º Ano'},{v:'terceiro',l:'3º Ano'},
+    {v:'quarto',l:'4º Ano'},{v:'quinto',l:'5º Ano'},{v:'sexto',l:'6º Ano'},
+    {v:'setimo',l:'7º Ano'},{v:'oitavo',l:'8º Ano'},{v:'nono',l:'9º Ano'},
+  ],
+  medio: [
+    {v:'primeiro',l:'1ª Série'},{v:'segundo',l:'2ª Série'},{v:'terceiro',l:'3ª Série'},
+  ],
+  infantil: [
+    {v:'bebes',l:'Bebês (0 a 1a6m)'},
+    {v:'bem_pequenas',l:'Bem Pequenas (1a7m a 3a11m)'},
+    {v:'pequenas',l:'Pequenas (4 a 5a11m)'},
+  ]
+};
+
+// ── BNCC Tab toggle ──
+function setBnccTab(tab, btn){
+  bnccTabAtual = tab;
+  document.querySelectorAll('.bncc-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('bnccPanelCodigo').style.display  = tab==='codigo'  ? '' : 'none';
+  document.getElementById('bnccPanelNavegar').style.display = tab==='navegar' ? '' : 'none';
+  if(tab==='navegar') bnccNavAtualizarDisciplinas();
+}
+
+// ── BNCC Nav: popular Disciplinas ──
+function bnccNavAtualizarDisciplinas(){
+  // Determina nível: usa iaNivel mas também aceita 'infantil' se vier do painel
+  const nivel = iaNivel; // 'fundamental' | 'medio' | 'infantil'
+  const discs = BNCC_DISCIPLINAS[nivel] || BNCC_DISCIPLINAS.fundamental;
+  const selDisc = document.getElementById('bnccNavDisc');
+  const selAno  = document.getElementById('bnccNavAno');
+  selDisc.innerHTML = '<option value="">— Selecione a disciplina —</option>' +
+    discs.map(d=>`<option value="${d.v}">${d.l}</option>`).join('');
+  selAno.innerHTML = '<option value="">Todos os anos</option>';
+  document.getElementById('bnccNavHabilidades').innerHTML =
+    '<div class="bncc-empty">Selecione a disciplina e clique em <strong>Carregar Habilidades</strong></div>';
+  document.getElementById('bnccNavSelecionada').style.display = 'none';
+}
+
+// ── BNCC Nav: popular Anos após escolher Disciplina ──
+function bnccNavAtualizarAnos(){
+  const nivel = iaNivel;
+  const anos = BNCC_ANOS[nivel] || BNCC_ANOS.fundamental;
+  const selAno = document.getElementById('bnccNavAno');
+  selAno.innerHTML = '<option value="">Todos os anos</option>' +
+    anos.map(a=>`<option value="${a.v}">${a.l}</option>`).join('');
+  // Limpa lista ao trocar disciplina
+  document.getElementById('bnccNavHabilidades').innerHTML =
+    '<div class="bncc-empty">Clique em <strong>Carregar Habilidades</strong></div>';
+}
+
+// ══════════════════════════════════════════════════════════════
+// BNCC API — estruturas reais por nível:
+//  Fundamental : {unidades_tematicas:[{nome_unidade, objeto_conhecimento:[{nome_objeto, habilidades:[{nome_habilidade:"(EF01MA01) desc"}]}]}]}
+//  Médio       : {codigo_habilidade:[{nome_codigo, nome_habilidade}]}
+//  Infantil    : {campos_experiencia:[{nome_campo, faixas_etarias:[{nome_faixa, objetivos:[{codigo, descricao}]}]}]}
+// ══════════════════════════════════════════════════════════════
+
+async function bnccFetch(url){
+  try{
+    const r = await fetch(url, {signal: AbortSignal.timeout(10000)});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return await r.json();
+  }catch(e){
+    // fallback proxy CORS
+    const proxy = 'https://corsproxy.io/?url=' + encodeURIComponent(url);
+    const r2 = await fetch(proxy, {signal: AbortSignal.timeout(12000)});
+    if(!r2.ok) throw new Error('proxy HTTP '+r2.status);
+    return await r2.json();
+  }
+}
+
+// Normaliza qualquer resposta em lista plana [{codigo, descricao, unidade}]
+function bnccFlattenHabilidades(data){
+  const lista = [];
+
+  // MÉDIO: {codigo_habilidade:[{nome_codigo, nome_habilidade}]}
+  if(data.codigo_habilidade){
+    for(const h of data.codigo_habilidade){
+      lista.push({codigo: h.nome_codigo||'', descricao: h.nome_habilidade||'', unidade:''});
+    }
+    return lista;
+  }
+
+  // FUNDAMENTAL: {unidades_tematicas:[{nome_unidade, objeto_conhecimento:[{habilidades:[{nome_habilidade:"(EFxxYY01) desc"}]}]}]}
+  if(data.unidades_tematicas){
+    for(const ut of data.unidades_tematicas){
+      for(const obj of (ut.objeto_conhecimento||[])){
+        for(const h of (obj.habilidades||[])){
+          const raw = h.nome_habilidade||'';
+          const m = raw.match(/^\(([A-Z0-9]+)\)\s*([\s\S]*)/);
+          lista.push({
+            codigo:   m ? m[1] : '',
+            descricao: m ? m[2].trim() : raw,
+            unidade:  ut.nome_unidade||''
+          });
+        }
+      }
+    }
+    return lista;
+  }
+
+  // INFANTIL: {campos_experiencia:[{nome_campo, faixas_etarias:[{nome_faixa, objetivos:[{codigo, descricao}]}]}]}
+  if(data.campos_experiencia){
+    for(const campo of data.campos_experiencia){
+      for(const faixa of (campo.faixas_etarias||[])){
+        for(const obj of (faixa.objetivos||[])){
+          lista.push({codigo: obj.codigo||'', descricao: obj.descricao||'', unidade: faixa.nome_faixa||''});
+        }
+      }
+    }
+    return lista;
+  }
+
+  // fallback array direto
+  if(Array.isArray(data)){
+    for(const h of data){
+      if(h.codigo||h.nome_codigo) lista.push({codigo: h.codigo||h.nome_codigo||'', descricao: h.descricao||h.nome_habilidade||'', unidade:''});
+    }
+  }
+  return lista;
+}
+
+// ── BNCC Nav: Carregar habilidades da API ──
+async function bnccNavCarregar(){
+  const disc  = document.getElementById('bnccNavDisc').value;
+  const ano   = document.getElementById('bnccNavAno').value;
+  const nivel = iaNivel;
+
+  if(!disc){ alert('Selecione a disciplina primeiro.'); return; }
+
+  const btn = document.getElementById('btnBnccNavLoad');
+  btn.disabled = true; btn.textContent = '⏳ Carregando…';
+  document.getElementById('bnccNavHabilidades').innerHTML = '<div class="bncc-loading">⏳ Consultando a API BNCC…</div>';
+
+  const BASE = 'https://cientificar1992.pythonanywhere.com';
+  let url;
+  if(nivel === 'infantil'){
+    url = ano ? `${BASE}/bncc_infantil/campo/${disc}/${ano}` : `${BASE}/bncc_infantil/campo/${disc}/`;
+  } else if(nivel === 'medio'){
+    url = ano ? `${BASE}/bncc_medio/disciplina/${disc}/${ano}` : `${BASE}/bncc_medio/disciplina/${disc}/`;
+  } else {
+    url = ano ? `${BASE}/bncc_fundamental/disciplina/${disc}/${ano}` : `${BASE}/bncc_fundamental/disciplina/${disc}/`;
+  }
+
+  try{
+    const data  = await bnccFetch(url);
+    const lista = bnccFlattenHabilidades(data);
+    renderBnccHabilidades(lista);
+  }catch(err){
+    document.getElementById('bnccNavHabilidades').innerHTML =
+      `<div class="bncc-empty" style="color:var(--dn);">❌ Erro ao carregar: ${esc(err.message)}<br>
+       <span style="font-size:10px;">Use a aba <strong>✏️ Código</strong> para inserir manualmente.</span></div>`;
+  }finally{
+    btn.disabled=false; btn.textContent='⬇ Carregar Habilidades';
+  }
+}
+
+// ── Renderiza lista de habilidades agrupada por unidade temática ──
+function renderBnccHabilidades(lista){
+  const cont = document.getElementById('bnccNavHabilidades');
+  if(!lista || lista.length === 0){
+    cont.innerHTML = '<div class="bncc-empty">Nenhuma habilidade encontrada para este filtro.</div>';
+    return;
+  }
+
+  // Agrupa por unidade
+  const grupos = {};
+  for(const h of lista){
+    const g = h.unidade||'';
+    if(!grupos[g]) grupos[g] = [];
+    grupos[g].push(h);
+  }
+  const temGrupos = Object.keys(grupos).length > 1 || (Object.keys(grupos).length===1 && Object.keys(grupos)[0]!=='');
+
+  let html = '<div class="bncc-hab-list">';
+  for(const [grp, itens] of Object.entries(grupos)){
+    if(temGrupos && grp){
+      html += `<div style="font-size:9.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;padding:6px 2px 2px;border-top:1px solid var(--br);margin-top:4px;">${esc(grp)}</div>`;
+    }
+    for(const h of itens){
+      // Escapa as aspas simples para uso no onclick
+      const codSafe = esc(h.codigo);
+      const descOnclick = h.descricao.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' ');
+      const descDisp = esc(h.descricao);
+      html += `<div class="bncc-hab-item" onclick="selecionarHabilidadeBncc('${codSafe}','${descOnclick}')">` +
+        `<div class="bncc-cod">${codSafe||'—'}</div>` +
+        `<div class="bncc-desc">${descDisp}</div>` +
+        `</div>`;
+    }
+  }
+  html += '</div>';
+  html += `<div style="font-size:10px;color:var(--mu);margin-top:5px;text-align:right;">${lista.length} habilidade(s)</div>`;
+  cont.innerHTML = html;
+}
+
+// ── Seleciona habilidade e preenche o campo de código ──
+function selecionarHabilidadeBncc(codigo, desc){
+  document.querySelectorAll('.bncc-hab-item').forEach(el=>el.classList.remove('selected'));
+  if(event && event.currentTarget) event.currentTarget.classList.add('selected');
+
+  bnccDescCache = {codigo, descricao: desc};
+  document.getElementById('iaBnccCodigo').value = codigo;
+
+  const sel = document.getElementById('bnccNavSelecionada');
+  sel.style.display = 'block';
+  sel.innerHTML = `✅ <strong>${esc(codigo)}</strong> — ${esc(desc.length>140?desc.slice(0,140)+'…':desc)}`;
+
+  const descEl = document.getElementById('bnccDesc');
+  descEl.style.display = 'block';
+  descEl.innerHTML = `<strong>${esc(codigo)}:</strong> ${esc(desc)}`;
+  document.getElementById('bnccErro').style.display = 'none';
+}
+
+function openModalIA(){
+  document.getElementById('modalIA').classList.remove('hidden');
+  // Carregar chave salva
+  const chave = localStorage.getItem('groqApiKey')||'';
+  if(chave) document.getElementById('groqApiKey').value = chave;
+  // Sincronizar nível com tipoProva atual
+  const nivelAuto = tipoProva === 'em' ? 'medio' : 'fundamental';
+  setNivelIA(nivelAuto, null);
+  atualizarBnccExemplos();
+}
+function closeModalIA(){ document.getElementById('modalIA').classList.add('hidden'); resetIAStatus(); }
+
+function setNivelIA(nivel, btn){
+  iaNivel = nivel;
+  document.querySelectorAll('#nivelFund,#nivelMed').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  else document.getElementById(nivel==='medio'?'nivelMed':'nivelFund').classList.add('active');
+  atualizarBnccExemplos();
+  clearBnccDesc();
+  // Atualiza disciplinas no navegador se estiver aberto
+  if(bnccTabAtual==='navegar') bnccNavAtualizarDisciplinas();
+}
+function setTipoIA(tipo, btn){
+  iaTipoQ = tipo;
+  document.querySelectorAll('#iaTipoMult,#iaTipoSomat,#iaTipoDisc').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('hintSomatoria').style.display = tipo==='somatoria' ? 'block' : 'none';
+}
+function setDifIA(dif, btn){
+  iaDificuldade = dif;
+  document.querySelectorAll('#difFacil,#difMedio,#difDificil').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function atualizarBnccExemplos(){
+  const exemplos = BNCC_EXEMPLOS[iaNivel]||[];
+  const el = document.getElementById('bnccExemplos');
+  el.innerHTML = exemplos.map(c=>`<span onclick="usarExemploBncc('${c}')" style="background:var(--acbg);padding:2px 6px;border-radius:4px;margin-right:4px;border:1px solid #bfdbfe;display:inline-block;margin-bottom:3px;color:var(--ac);">${c}</span>`).join('');
+}
+function usarExemploBncc(codigo){
+  document.getElementById('iaBnccCodigo').value = codigo;
+  clearBnccDesc();
+}
+function clearBnccDesc(){
+  document.getElementById('bnccDesc').style.display='none';
+  document.getElementById('bnccErro').style.display='none';
+  bnccDescCache = null;
+}
+function salvarChaveGroq(){
+  const v = document.getElementById('groqApiKey').value.trim();
+  if(!v){ alert('Digite a chave Groq primeiro.'); return; }
+  localStorage.setItem('groqApiKey', v);
+  alert('✅ Chave salva no navegador!');
+}
+function resetIAStatus(){
+  const s = document.getElementById('iaStatus');
+  s.style.display='none'; s.innerHTML='';
+  const btn = document.getElementById('btnGerarIA');
+  btn.disabled=false; btn.innerHTML='✨ Gerar Questão com IA';
+}
+function setIAStatus(msg, tipo){
+  const s = document.getElementById('iaStatus');
+  s.style.display='block';
+  const cores = {
+    info:  {bg:'#eff6ff',border:'#bfdbfe',color:'#1e40af'},
+    ok:    {bg:'#f0fdf4',border:'#bbf7d0',color:'#166534'},
+    erro:  {bg:'#fef2f2',border:'#fecaca',color:'#991b1b'},
+    load:  {bg:'#faf5ff',border:'#e9d5ff',color:'#6d28d9'}
+  };
+  const c = cores[tipo]||cores.info;
+  s.style.background=c.bg; s.style.borderColor=c.border; s.style.color=c.color;
+  s.innerHTML=msg;
+}
+
+// ── Busca por código digitado (inferindo nível/disciplina do código) ──
+async function buscarBncc(){
+  const codigo = document.getElementById('iaBnccCodigo').value.trim().toUpperCase();
+  if(!codigo){ alert('Digite um código BNCC.'); return; }
+  const btn = document.getElementById('btnBuscarBncc');
+  btn.disabled=true; btn.textContent='⏳…';
+  clearBnccDesc();
+
+  // ── Infere nível e disciplina pelo código ──
+  // Formato EF + ano(2) + disciplina(2-3) + num(2) = Fundamental
+  // EM + ano(2) + disciplina(2-3) + num(3) = Médio
+  // EI + num = Infantil
+  const mapeamentoDisciplinas = {
+    'LP': 'lingua_portuguesa', 'LG': 'lingua_portuguesa', 'MA': 'matematica',
+    'CI': 'ciencias', 'HI': 'historia', 'GE': 'geografia', 'AR': 'arte',
+    'EF': 'educacao_fisica', 'ER': 'ensino_religioso', 'LI': 'lingua_inglesa',
+    'CO': 'computacao',
+    // Médio
+    'CNT': 'ciencias_natureza', 'MAT': 'matematica_medio', 'LGG': 'linguagens',
+    'CHS': 'ciencias_humanas',
+  };
+
+  let nivel = null, discEndpoint = null;
+  if(codigo.startsWith('EF')){
+    nivel = 'fundamental';
+    const sigla = codigo.slice(4, codigo.length-2); // ex: "CI" de EF06CI01
+    const disc2 = codigo.slice(4,6);
+    const disc3 = codigo.slice(4,7);
+    discEndpoint = mapeamentoDisciplinas[disc3] || mapeamentoDisciplinas[disc2] || null;
+  } else if(codigo.startsWith('EM')){
+    nivel = 'medio';
+    const disc3 = codigo.slice(4,7);
+    discEndpoint = mapeamentoDisciplinas[disc3] || null;
+  } else if(codigo.startsWith('EI')){
+    nivel = 'infantil';
+  }
+
+  try{
+    let encontrado = false;
+    if(discEndpoint && nivel){
+      const prefixo = nivel==='fundamental' ? 'bncc_fundamental' : 'bncc_medio';
+      const url = `https://cientificar1992.pythonanywhere.com/${prefixo}/disciplina/${discEndpoint}/`;
+      const data  = await bnccFetch(url);
+      const lista = bnccFlattenHabilidades(data);
+      const achou = lista.find(h => h.codigo.toUpperCase() === codigo);
+      if(achou){
+        bnccDescCache = {codigo, descricao: achou.descricao};
+        const el = document.getElementById('bnccDesc');
+        el.style.display='block';
+        el.innerHTML=`<strong>${esc(codigo)}:</strong> ${esc(achou.descricao)}`;
+        encontrado = true;
+      }
+    }
+
+    if(!encontrado){
+      bnccDescCache = {codigo, descricao: `Habilidade ${codigo}`};
+      document.getElementById('bnccErro').style.display='block';
+      document.getElementById('bnccErro').innerHTML =
+        `⚠ Código <strong>${esc(codigo)}</strong> não localizado na base. `+
+        `A IA usará o código mesmo assim. `+
+        `<a href="https://cientificar1992.pythonanywhere.com/visualizarBncc/" target="_blank" style="color:var(--ac);">Verificar →</a>`;
+    }
+  }catch(err){
+    bnccDescCache = {codigo, descricao: `Habilidade ${codigo}`};
+    document.getElementById('bnccErro').style.display='block';
+    document.getElementById('bnccErro').innerHTML=
+      `ℹ️ API BNCC inacessível (${esc(err.message)}). A IA usará o código <strong>${esc(codigo)}</strong> mesmo assim.`;
+  }finally{
+    btn.disabled=false; btn.textContent='🔍 Buscar';
+  }
+}
+
+async function gerarQuestaoIA(){
+  const apiKey = (document.getElementById('groqApiKey').value||'').trim();
+  if(!apiKey){ alert('Informe a chave da API Groq.'); return; }
+  const objeto = document.getElementById('iaObjeto').value.trim();
+  if(!objeto){ alert('Informe o objeto de aprendizagem.'); return; }
+  const codigoBncc = document.getElementById('iaBnccCodigo').value.trim().toUpperCase();
+
+  // Monta contexto BNCC
+  let bnccCtx = '';
+  if(codigoBncc){
+    if(!bnccDescCache) await buscarBncc();
+    bnccCtx = bnccDescCache
+      ? `\nHabilidade BNCC: ${bnccDescCache.codigo} — ${bnccDescCache.descricao}`
+      : `\nHabilidade BNCC: ${codigoBncc}`;
+  }
+
+  const nivelLabel = iaNivel === 'medio' ? 'Ensino Médio' : iaNivel === 'infantil' ? 'Educação Infantil' : 'Ensino Fundamental';
+
+  // Determina alternativas conforme formato
+  let letras;
+  if(iaFormato === 'enem' || iaFormato === 'udesc') letras = ['A','B','C','D','E'];
+  else if(iaFormato === 'ufsc')                     letras = ['A','B','C','D'];
+  else letras = tipoProva === 'em' ? ['A','B','C','D','E'] : ['A','B','C','D'];
+  const numAlts = letras.length;
+
+  // Somatória: 7 itens — valores 01 02 04 08 16 32 64 (máx = 127)
+  const SOMA_VALS = [1, 2, 4, 8, 16, 32, 64];
+  const somaMax   = SOMA_VALS.reduce((a,v)=>a+v,0); // 127
+
+  // ─── REGRAS DE ENUNCIADO (injetadas em todos os prompts) ────────────────────
+  const regrasEnunciado = `
+REGRAS OBRIGATÓRIAS PARA O ENUNCIADO:
+1. NUNCA inclua no enunciado palavras ou frases que indiquem a resposta correta (ex: "incorreto", "não é verdade", "exceto", "todos", "nenhum" como pistas diretas).
+2. O enunciado deve apresentar uma SITUAÇÃO, CONTEXTO ou PROBLEMA concreto — NUNCA seja apenas uma pergunta conceitual seca como "O que é fotossíntese?".
+3. Desenvolva a INTERPRETAÇÃO e o RACIOCÍNIO do aluno: parta de uma situação real, dado, trecho, tabela descrita em texto, gráfico descrito, diálogo, notícia, experimento ou cenário fictício plausível.
+4. Linguagem adequada ao ${nivelLabel} — nem simplista demais, nem inacessível.
+5. NÃO mencione "alternativas", "opções" ou "itens" dentro do enunciado.
+6. Imagem: se a questão se beneficiar de uma imagem (gráfico, mapa, tabela, diagrama, figura), preencha "sugestao_imagem" com uma descrição objetiva do que deveria aparecer (ex: "Gráfico de barras comparando população de 5 biomas brasileiros"). Caso contrário, deixe vazio.`;
+
+  // ─── CONTEXTOS DE FORMATO ──────────────────────────────────────────────────
+  const formatoCtx = {
+    escola:`Questão didática para ${nivelLabel}. Linguagem acessível, situação do dia a dia escolar ou cotidiano do aluno.`,
+    ufsc:  `Estilo Vestibular UFSC: linguagem rigorosa e precisa, situação baseada em conceito científico, técnico ou histórico. Sem ambiguidades. Evite linguagem coloquial.`,
+    udesc: `Estilo Vestibular UDESC: linguagem técnico-científica, 5 alternativas. Pode contextualizar com dados de Santa Catarina ou Sul do Brasil quando pertinente.`,
+    enem:  `Estilo ENEM: OBRIGATÓRIO um texto norteador (norteador) com 3 a 6 linhas — pode ser trecho jornalístico, literário, científico, dado estatístico ou situação-problema. O enunciado DEVE partir do texto norteador. Abordagem interdisciplinar, cidadania, situações reais e atuais. O norteador e o enunciado NÃO devem entregar a resposta.`,
+  }[iaFormato] || '';
+
+  // ─── PROMPT MÚLTIPLA ESCOLHA ──────────────────────────────────────────────
+  const promptMultipla = `Você é um elaborador expert em questões pedagógicas e de vestibular.
+ESTILO: ${formatoCtx}
+TEMA/OBJETO: "${objeto}"${bnccCtx}
+DIFICULDADE: ${iaDificuldade}
+NÚMERO DE ALTERNATIVAS: exatamente ${numAlts} (${letras.join(', ')})
+${regrasEnunciado}
+
+Responda EXCLUSIVAMENTE em JSON puro, sem markdown, sem texto fora do JSON:
+{
+  "norteador": "${iaFormato==='enem'?'OBRIGATÓRIO: texto norteador de 3 a 6 linhas (trecho, dado, situação). NÃO entregue a resposta nele.':'texto introdutório ou contexto curto — pode ser vazio'}",
+  "enunciado": "situação-problema ou contexto que exija interpretação e raciocínio — NÃO revela a resposta",
+  "consigna": "Assinale a alternativa correta.",
+  "sugestao_imagem": "descrição objetiva de uma imagem que enriqueceria a questão, ou vazio se não se aplica",
+  "alternativas": [
+    {"letra":"A","texto":"alternativa plausível mas incorreta","correta":false},
+    {"letra":"B","texto":"alternativa correta — tecnicamente precisa","correta":true},
+    {"letra":"C","texto":"alternativa com erro sutil e plausível","correta":false}${numAlts>3?',\n    {"letra":"D","texto":"alternativa com erro conceitual plausível","correta":false}':''}${numAlts>4?',\n    {"letra":"E","texto":"alternativa com erro sutil diferente dos demais","correta":false}':''}
+  ]
+}
+ATENÇÃO: apenas UMA correta. Varie o gabarito (não sempre B). Distratores devem ser convincentes — erros sutis, não absurdos. O enunciado e o norteador NÃO devem conter pistas para a resposta correta.`;
+
+  // ─── PROMPT SOMATÓRIA (7 itens: 01 02 04 08 16 32 64 — máx 127) ─────────
+  const promptSomatoria = `Você é um elaborador expert em questões de SOMATÓRIA.
+ESTILO: ${formatoCtx}
+TEMA/OBJETO: "${objeto}"${bnccCtx}
+DIFICULDADE: ${iaDificuldade}
+${regrasEnunciado}
+
+Crie UMA questão de SOMATÓRIA com EXATAMENTE 7 afirmações, com valores (01)(02)(04)(08)(16)(32)(64) — pontuação máxima 127.
+Cada afirmação pode ser VERDADEIRA ou FALSA. O gabarito = soma dos valores dos itens verdadeiros.
+DISTRIBUIÇÃO: entre 3 e 5 itens verdadeiros, de forma não óbvia e variada.
+As afirmações FALSAS devem conter erros sutis, plausíveis — não absurdos.
+As afirmações VERDADEIRAS devem ser tecnicamente corretas e precisas.
+Inclua um CONTEXTO/SITUAÇÃO no enunciado (dados, experimento, cenário) que exija interpretação.
+
+Responda EXCLUSIVAMENTE em JSON puro, sem markdown:
+{
+  "norteador": "${iaFormato==='enem'?'OBRIGATÓRIO: texto norteador de 3 a 6 linhas':'contexto introdutório curto ou vazio'}",
+  "enunciado": "situação ou contexto que contextualiza as afirmações — NÃO revela quais são verdadeiras",
+  "consigna": "Assinale a alternativa que representa a soma correta.",
+  "sugestao_imagem": "descrição de imagem útil à questão, ou vazio",
+  "itens": [
+    {"valor":1,  "texto":"texto da afirmação — sem incluir o número","correta":true},
+    {"valor":2,  "texto":"texto da afirmação","correta":false},
+    {"valor":4,  "texto":"texto da afirmação","correta":true},
+    {"valor":8,  "texto":"texto da afirmação","correta":false},
+    {"valor":16, "texto":"texto da afirmação","correta":true},
+    {"valor":32, "texto":"texto da afirmação","correta":false},
+    {"valor":64, "texto":"texto da afirmação","correta":true}
+  ]
+}
+ATENÇÃO: use EXATAMENTE 7 itens. Textos NÃO devem incluir o valor numérico. O enunciado NÃO deve indicar quais são verdadeiros.`;
+
+  // ─── PROMPT DISCURSIVA ────────────────────────────────────────────────────
+  const promptDiscursiva = `Você é um elaborador expert em questões dissertativas.
+ESTILO: ${formatoCtx}
+TEMA/OBJETO: "${objeto}"${bnccCtx}
+DIFICULDADE: ${iaDificuldade}
+${regrasEnunciado}
+
+Crie UMA questão discursiva que exija do aluno interpretação, análise e síntese — não apenas memorização.
+A questão deve ter 1 ou 2 partes (a e b) quando a dificuldade for média ou difícil.
+
+Responda EXCLUSIVAMENTE em JSON puro, sem markdown:
+{
+  "norteador": "${iaFormato==='enem'?'OBRIGATÓRIO: texto norteador de 3 a 6 linhas':'contexto introdutório ou vazio'}",
+  "enunciado": "situação-problema que exige interpretação e produção escrita fundamentada",
+  "consigna": "Responda de forma clara e objetiva, fundamentando sua resposta.",
+  "sugestao_imagem": "descrição de imagem útil, ou vazio"
+}`;
+
+  const prompt =
+    iaTipoQ === 'somatoria'  ? promptSomatoria  :
+    iaTipoQ === 'discursiva' ? promptDiscursiva  : promptMultipla;
+
+  // UI: loading
+  const btn = document.getElementById('btnGerarIA');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="ia-spin"></span> Gerando…';
+  setIAStatus(`⏳ Gerando questão de <strong>${iaTipoQ}</strong> estilo <strong>${iaFormato.toUpperCase()}</strong>…`, 'load');
+
+  try{
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.78,
+        max_tokens: 1800,
+        messages: [
+          { role: 'system', content: `Você é um elaborador especialista em questões pedagógicas e de vestibular alinhadas à BNCC. Crie questões ricas em contextualização, que desenvolvam interpretação e raciocínio. NUNCA inclua pistas para a resposta dentro do enunciado. Responda SEMPRE em JSON puro e válido, sem markdown, sem texto fora do JSON.` },
+          { role: 'user', content: prompt }
+        ]
+      })
+    });
+
+    if(!resp.ok){
+      const errData = await resp.json().catch(()=>({error:{message:resp.statusText}}));
+      throw new Error(`Groq API: ${errData?.error?.message || resp.statusText}`);
+    }
+
+    const data   = await resp.json();
+    const raw    = data.choices?.[0]?.message?.content || '';
+    let jsonStr  = raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
+    let gerada;
+    try { gerada = JSON.parse(jsonStr); }
+    catch(pe){
+      const match = jsonStr.match(/\{[\s\S]+\}/);
+      if(match) gerada = JSON.parse(match[0]);
+      else throw new Error('Resposta da IA não é JSON válido. Tente novamente.');
+    }
+
+    // Mescla norteador + enunciado no campo distrator/enunciado da questão
+    const norteador = (gerada.norteador||'').trim();
+    const enunciado = (gerada.enunciado||'').trim();
+    const sugestaoImg = (gerada.sugestao_imagem||'').trim();
+
+    let novaQ = {
+      id:        ++qId,
+      tipo:      iaTipoQ,
+      distrator: norteador,               // norteador/texto motivador vai pro distrator
+      imagem:    null,
+      consigna:  gerada.consigna || '',
+      enunciado: enunciado,
+      pts:       parseFloat(document.getElementById('ptsDefault').value) || 1,
+      alternativas: letras.map((l,i)=>({letra:l,texto:'',correta:i===0})),
+      somatoria: SOMA_VALS.map(v=>({v, txt:'', ok:false})),
+      linhas:    4
+    };
+
+    if(iaTipoQ === 'multipla'){
+      const altsIA = gerada.alternativas || [];
+      novaQ.alternativas = letras.map((l,i)=>({
+        letra:   l,
+        texto:   altsIA[i]?.texto || '',
+        correta: !!altsIA[i]?.correta
+      }));
+      if(!novaQ.alternativas.some(a=>a.correta)) novaQ.alternativas[0].correta = true;
+    }
+
+    if(iaTipoQ === 'somatoria'){
+      const itensIA = gerada.itens || [];
+      novaQ.somatoria = SOMA_VALS.map((v,i)=>({
+        v,
+        txt: itensIA[i]?.texto || '',
+        ok:  !!itensIA[i]?.correta
+      }));
+      const somaGab = novaQ.somatoria.filter(s=>s.ok).reduce((a,s)=>a+s.v, 0);
+      novaQ.consigna = gerada.consigna || `Assinale a soma das proposições corretas.`;
+      novaQ._gabSoma = somaGab; // para exibir no status
+    }
+
+    questoes.push(novaQ);
+    renderAll();
+    updatePts();
+
+    // Monta mensagem de status
+    let statusExtra = '';
+    if(iaTipoQ==='somatoria') statusExtra = ` — Gabarito = <strong>${novaQ._gabSoma}</strong>`;
+    if(sugestaoImg) statusExtra += `<br>🖼 <em>Sugestão de imagem:</em> ${esc(sugestaoImg)}`;
+
+    setIAStatus(
+      `✅ Questão <strong>${iaTipoQ}</strong> estilo <strong>${iaFormato.toUpperCase()}</strong> gerada! `+
+      `Adicionada como <strong>Questão ${questoes.length}</strong>.${statusExtra}<br>`+
+      `<small style="opacity:.75;">Revise o enunciado, alternativas e insira imagem se necessário.</small>`,
+      'ok'
+    );
+    btn.disabled = false;
+    btn.innerHTML = '✨ Gerar Outra Questão';
+
+    setTimeout(()=>{
+      const el = document.getElementById('qw-'+novaQ.id);
+      if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 400);
+
+  }catch(err){
+    setIAStatus(`❌ <strong>Erro:</strong> ${err.message}`, 'erro');
+    btn.disabled = false;
+    btn.innerHTML = '✨ Gerar Questão com IA';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// HELPER: gera w:drawing para imagem de questão no DOCX
+// ══════════════════════════════════════════════════════════════
+function imgDrawingXml(imgB64, maxWtwips, rId){
+  return new Promise(resolve => {
+    if(!imgB64){ resolve(''); return; }
+    const img = new Image();
+    img.onload = () => {
+      const maxWemu = maxWtwips * 635;
+      const maxHemu = 5000 * 635;
+      const ratio = img.naturalWidth / img.naturalHeight;
+      let emuW = maxWemu;
+      let emuH = Math.round(emuW / ratio);
+      if(emuH > maxHemu){ emuH = maxHemu; emuW = Math.round(emuH * ratio); }
+      resolve(
+        `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="60" w:after="60"/></w:pPr>` +
+        `<w:r><w:rPr><w:noProof/></w:rPr><w:drawing>` +
+        `<wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">` +
+        `<wp:extent cx="${emuW}" cy="${emuH}"/>` +
+        `<wp:effectExtent l="0" t="0" r="0" b="0"/>` +
+        `<wp:docPr id="${rId}" name="img${rId}"/>` +
+        `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">` +
+        `<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
+        `<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
+        `<pic:nvPicPr><pic:cNvPr id="${rId}" name="img${rId}"/><pic:cNvPicPr><a:picLocks noChangeAspect="1"/></pic:cNvPicPr></pic:nvPicPr>` +
+        `<pic:blipFill><a:blip r:embed="rIdImg${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>` +
+        `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${emuW}" cy="${emuH}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>` +
+        `</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`
+      );
+    };
+    img.onerror = () => resolve('');
+    img.src = imgB64;
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// EXPORTAR VERSÕES EMBARALHADAS EM DOCX
+// ══════════════════════════════════════════════════════════════
+async function gerarVersoesDocx(){
+  const doShuffleQ = document.getElementById('shuffleQuestoes').checked;
+  const doShuffleA = document.getElementById('shuffleAlternativas').checked;
+  if(!doShuffleQ && !doShuffleA){ alert('Selecione ao menos uma opção de embaralhamento.'); return; }
+  const enunciadosVazios = questoes.filter(q => !q.enunciado || !q.enunciado.trim());
+  if(enunciadosVazios.length > 0){
+    if(!confirm(`⚠ ${enunciadosVazios.length} questão(ões) sem enunciado. Deseja continuar mesmo assim?`)) return;
+  }
+
+  const btn = document.getElementById('btnShuffleDocx');
+  btn.disabled = true; btn.textContent = '⏳ Gerando…';
+  closeShuffleModal();
+
+  const VERSAO_LABELS = ['A','B','C','D'];
+
+  try{
+    for(let v = 0; v < numVersoes; v++){
+      const label = VERSAO_LABELS[v]||String(v+1);
+      // Usa buildShuffledQuestoes para gerar questões embaralhadas desta versão
+      const qs = buildShuffledQuestoes();
+      // buildAndDownloadDocx receberá o array já embaralhado — gabarito e questões sincronizados
+      await buildAndDownloadDocx(qs, label);
+    }
+  }finally{
+    btn.disabled=false; btn.textContent='📝 Exportar Versões DOCX';
+  }
+}
+
+</script>
+</body>
+</html>
