@@ -702,9 +702,9 @@ JSON de resposta:`;
         method: 'POST',
         headers: {'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'openai/gpt-oss-120b',
           temperature: 0.5,
-          max_tokens: 900,
+          max_completion_tokens: 3000,
           messages: [
             {role:'system', content:'Você é especialista em inclusão escolar e adaptação de avaliações. Responda SEMPRE em JSON puro e válido, sem markdown.'},
             {role:'user', content: promptNEE}
@@ -2185,9 +2185,9 @@ Responda EXCLUSIVAMENTE em JSON puro, sem markdown:
       method: 'POST',
       headers: {'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         temperature: 0.78,
-        max_tokens: 1800,
+        max_completion_tokens: 6000,
         messages: [
           { role: 'system', content: `Você é um elaborador especialista em questões pedagógicas e de vestibular alinhadas à BNCC. Crie questões ricas em contextualização, que desenvolvam interpretação e raciocínio. NUNCA inclua pistas para a resposta dentro do enunciado. Responda SEMPRE em JSON puro e válido, sem markdown, sem texto fora do JSON.` },
           { role: 'user', content: prompt }
